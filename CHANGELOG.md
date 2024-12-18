@@ -1,5 +1,5 @@
 # Release Notes for Inertia
 
-## 0.0.1
+## 1.0.0-alpha.1
 
 - Initial release
