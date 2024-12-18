@@ -1,39 +1,35 @@
 {
-  "name": "wsydney76/inertia",
-  "description": "Craft Inertia Adapter PoC",
+  "name": "rareform/craft-inertia",
+  "description": "Inertia.js adapter for Craft CMS",
+  "version": "1.0.0-alpha.1",
   "type": "craft-plugin",
-  "version": "1.0.0",
-  "keywords": [
-    "craft",
-    "cms",
-    "craftcms",
-    "inertia"
-  ],
-  "support": {
-    "docs": "https://github.com/wsydney76/inertia/blob/master/README.md",
-    "issues": "https://github.com/wsydney76/inertia/issues"
-  },
   "license": "MIT",
-  "authors": [
-    {
-      "name": "wsydney76",
-      "homepage": "https://github.com/wsydney76"
-    }
-  ],
   "require": {
-    "craftcms/cms": "^4.0.5"
+    "php": "^8.2",
+    "craftcms/cms": "^5.0.0"
+  },
+  "require-dev": {
+    "craftcms/generator": "^2.1"
   },
   "autoload": {
     "psr-4": {
-      "wsydney76\\inertia\\": "src/"
+      "rareform\\inertia\\": "src/"
     }
   },
   "extra": {
-    "name": "Inertia",
     "handle": "inertia",
-    "hasCpSettings": false,
-    "hasCpSection": false,
-    "changelogUrl": "https://raw.githubusercontent.com/wsydney76/inertia/master/CHANGELOG.md",
-    "class": "wsydney76\\inertia\\Inertia"
+    "name": "Inertia",
+    "developer": "RareForm",
+    "documentationUrl": "https://github.com/rareformlabs/craft-inertia"
+  },
+  "config": {
+    "sort-packages": true,
+    "platform": {
+      "php": "8.2"
+    },
+    "allow-plugins": {
+      "yiisoft/yii2-composer": true,
+      "craftcms/plugin-installer": true
+    }
   }
 }

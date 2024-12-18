@@ -1,210 +1,126 @@
-# Inertia js Craft CMS Adapter
+# Inertia.js Craft CMS Adapter
 
-This is a Craft CMS server-side adapter for [Inertia](https://inertiajs.com).
+![image](https://github.com/user-attachments/assets/97f925a2-74c8-4cc6-ad47-c4cdaafe915d)
 
-It is actually the Yii 2 Adapter (original read me below), all Yii 2 references were simply replaced by their Craft CMS counterparts.
+This is a server-side adapter for [Inertia](https://inertiajs.com) built with Craft CMS workflow simplicity in mind.
 
+It utilizes Craft's routing, as well as _Twig_ for crafting Inertia responses, rather than requiring they be written directly in PHP (as a traditional Inertia application does).
 
-# Inertia.js Yii 2 Adapter
-
-This is the Yii 2 server-side adapter for [Inertia](https://inertiajs.com).
-
-With Inertia you are able to build single-page apps using classic server-side routing and controllers, without building an API. 
-
-To use Inertia you need both a server-side adapter as well as a client-side adapter.
- 
-Be sure to follow the installation instructions for the [client-side framework](https://inertiajs.com/client-side-setup) you use.
-
-## Demo
-
-<https://pingcrm-yii2.tebe.ch>
+[Demo project](https://github.com/rareformlabs/pingcrm)
 
 ## Installation
 
-Composer require dependency:
+Install via Composer:
 
 ```sh
-composer require tebe/yii2-inertia:dev-master
+composer require rareform/craft-inertia
+php craft plugin/install inertia
 ```
 
-Edit `config/web.php`:
+Be sure to follow the installation instructions for the [client-side framework](https://inertiajs.com/client-side-setup) you use.
+
+## Required Reading
+
+The [Inertia documentation](https://inertiajs.com) is a must-read to understand the protocol, the responsibilities of this adapter, and how to use Inertia on the client-side. The following sections will explain how to use this adapter, but assume you have a basic understanding of Inertia.
+
+## Defining Pages
+
+Every page in your javascript application is backed by a Twig template which returns a [page object](https://inertiajs.com/the-protocol#the-page-object). The page object defines which page component to render, and what prop data is received.
+
+```twig
+{# templates/posts/index.twig #}
+
+{% set posts = craft.entries.section('posts').limit(20).all() | map(post => {
+    title: post.title,
+    body: post.body
+}) %}
+
+{# Use the Inertia variable to return the Page component to render, and the props to pass down #}
+{{ inertia('Posts/Index', { posts: posts }) }}
+```
+
+## Shared Data
+
+Shared data will automatically be passed as props to your application, sparing you the cumbersome tasks of redefining the same prop data in every page response.
+
+Create a `shared.twig` at the root of your `/templates` directory, and use the `inertiaShare` variable:
+
+```twig
+{# templates/shared.twig #}
+
+{% set sharedProps = {
+   flashes: craft.app.session.getAllFlashes(true),
+   csrfTokenValue: craft.app.request.csrfToken,
+   csrfTokenName: craft.app.config.general.csrfTokenName
+} %}
+
+{% if currentUser %}
+  {% set user = {
+    id: currentUser.id,
+    fullName: currentUser.fullName,
+    email: currentUser.email,
+  } %}
+  {% set sharedProps = sharedProps|merge({currentUser: user}) %}
+{% endif %}
+
+{{ inertiaShare(shareProps) }}
+```
+
+## Configuration
+
+Create an `inertia.php` file in your Craft `/config` directory. Shown are the default values:
 
 ```php
 <?php
 
 return [
-    ...
-    'bootstrap' => ['inertia']
-    ...
-    'components' => [
-        'inertia' => [
-            'class' => 'modules\inertia\Inertia'
-        ],
-        'request' => [
-            'cookieValidationKey' => '<cookie_validation_key>',
-            'enableCsrfValidation' => false,
-            'enableCsrfCookie' => false,
-            'parsers' => [
-                'application/json' => 'yii\web\JsonParser',
-            ]            
-        ]      
-    ]
-    ...
-];   
-```
+    // The root template that will be rendered when first loading your Inertia app
+    // (https://inertiajs.com/the-protocol#html-responses).
+    // Includes the div the inertia app will be rendered to:
+    // `<div id="app" data-page="{{ page|json_encode }}"></div>`
+    // and calls the Inertia app `<script src="<path_to_app>/app.js"></script>`
+    'view' => 'base.twig',
 
-Note that CSRF protection is disabled.
+    // Whether inertia's assets versioning shall be used
+    // (https://inertiajs.com/the-protocol#asset-versioning)
+    'useVersioning' => true,
 
-## Controllers
-
-Your backend controllers should extend from `modules\inertia\web\Controller`.
-Instead of the render method within your actions you should use the `inertia` method. 
-
-```php
-<?php
-
-namespace app\controllers;
-
-use modules\inertia\web\Controller;
-
-class DemoController extends Controller
-{
-    public function actionIndex()
-    {
-        $params = [
-            'data' => [],
-            'links' => []
-        ];
-        return $this->inertia('demo/index', $params);
-    }
-}
-```
-
-## Routing
-
-Use your Yii server-side routes as usual. 
-There is nothing special.
-
-## CSRF protection
-
-Axios is the HTTP library that Inertia uses under the hood.
-Yii's CSRF protection is not optimized for Axios.
-
-The easiest way to implement CSRF protection is using the customized `modules\inertia\web\Request` component. 
-Simply edit `config/web.php` file:
- 
- ```php
- <?php
- 
- return [
-     'components' => [
-         'request' => [
-             'class' => 'modules\inertia\web\Request',             
-             'cookieValidationKey' => '<cookie_validation_key>'
-         ]      
-     ]
- ];   
- ```
-
-Please see the [security page](https://inertiajs.com/security) for more details.
-
-### Shared data
-
-The Yii 2 adapter provides a way to preassign shared data for each request. 
-This is typically done outside of your controllers. 
-Shared data will be automatically merged with the page props provided in your controller.
-
-Massive assignment of shared data:  
-
-```php
-<?php
-
-$shared = [
-    'user' => [
-        'id' => $this->getUser()->id,
-        'first_name' => $this->getUser()->firstName,
-        'last_name' => $this->getUser()->lastName,
+    // Array of directories that will be checked for changed assets if `useVersioning` => true
+    'assetsDirs' => [
+        '@webroot/dist/assets'
     ],
-    'flash' => $this->getFlashMessages(),
-    'errors' => $this->getFormErrors(),
-    'filters' => $this->getGridFilters()
+
+    // Whether to inject the element matched from routing automatically into the application
+    'injectElementAsProp' => false,
+
+    // Whether all routes will be Inertia responses
+    'takeoverRouting' => true,
 ];
-Inertia::getInstance()->share($shared);
 ```
 
-Shared data for one key:
+## Requirements
 
-```php
-<?php
+This plugin requires Craft CMS 5.4.0 or later, and PHP 8.2 or later.
 
-$user = [
-    'id' => $this->getUser()->id,
-    'first_name' => $this->getUser()->firstName,
-    'last_name' => $this->getUser()->lastName
-];
-Inertia::getInstance()->share('user', $user);
+## Installation
+
+You can install this plugin from the Plugin Store or with Composer.
+
+#### From the Plugin Store
+
+Go to the Plugin Store in your project’s Control Panel and search for “Inertia”. Then press “Install”.
+
+#### With Composer
+
+Open your terminal and run the following commands:
+
+```bash
+# go to the project directory
+cd /path/to/my-project.test
+
+# tell Composer to load the plugin
+composer require rareform/craft-inertia
+
+# tell Craft to install the plugin
+./craft plugin/install inertia
 ```
-
-A good strategy when using shared data outside of your controllers is to implement an action filter.
-
-```php
-<?php
-
-namespace app\components;
-
-use yii\base\ActionFilter;
-
-class SharedDataFilter extends ActionFilter
-{
-    public function beforeAction()
-    {
-        $shared = [
-            'user' => $this->getUser(),
-            'flash' => $this->getFlashMessages(),
-            'errors' => $this->getFormErrors()
-        ];
-        Inertia::getInstance()->share($shared);
-        return true;
-    }
-}    
-```
-
-And then use this action filter as a behaviour in your controller.
-
-```php
-<?php
-
-namespace app\controllers;
-
-use app\components\SharedDataFilter;
-use modules\inertia\web\Controller;
-
-class ContactController extends Controller
-{
-    public function behaviors()
-    {
-        return [
-            [
-                'class' => SharedDataFilter::class
-            ]
-        ];
-    }
-    
-    public function actionIndex()
-    {
-        // your action code
-    }
-}
-```
-
-Please see the [shared data page](https://inertiajs.com/shared-data) for more details.
-
-## Client-side setup
-
-To use Inertia you need to setup your client-side framework. 
-This primarily includes updating your main JavaScript file to boot the Inertia app. 
-Please see the [client-side setup page](https://inertiajs.com/client-side-setup) for more details.
-
-## More about Inertia
-
-Visit [inertiajs.com](https://inertiajs.com/) to learn more.
