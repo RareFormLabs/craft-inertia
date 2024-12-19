@@ -11,6 +11,7 @@ use craft\base\Plugin as BasePlugin;
 use craft\events\RegisterTemplateRootsEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\SetElementRouteEvent;
+use craft\events\ModelEvent;
 use craft\helpers\App;
 use craft\web\Application;
 use craft\web\UrlManager;
@@ -221,6 +222,15 @@ class Plugin extends BasePlugin
                 Craft::$container->set('currentElement', $element);
             }
         );
-    }
 
+
+        Event::on(
+            Element::class,
+            Element::EVENT_AFTER_SAVE,
+            function (ModelEvent $event) {
+                $element = $event->sender;
+                Craft::$app->session->set('recentElementSave', $element->id);
+            }
+        );
+    }
 }

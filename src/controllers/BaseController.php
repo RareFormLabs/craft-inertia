@@ -140,6 +140,14 @@ class BaseController extends Controller
      */
     private function getInertiaProps($params = [], $view): array
     {
+        $session = Craft::$app->session;
+
+        if ($session->has('recentElementSave')) {
+            $elementId = $session->get('recentElementSave');
+            $params['recentElementSave'] = $elementId;
+            $session->remove('recentElementSave');
+        }
+
         $sharedProps = $this->getSharedPropsFromTemplate();
         $mergedParams = array_merge($sharedProps, $params);
         return $this->resolvePartialProps($mergedParams, $view);
