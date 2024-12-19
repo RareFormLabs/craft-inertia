@@ -58,7 +58,7 @@ class BaseController extends Controller
                 $stringResponse = Craft::$app->getView()->renderTemplate($template, $templateVariables);
             } catch (\Exception $e) {
                 Craft::error('Template rendering failed: ' . $e->getMessage(), __METHOD__);
-                throw new \Exception('An error occurred while rendering the template.');
+                throw new \Exception('Template rendering failed: ' . $e->getMessage());
             }
 
             // Decode JSON object from $stringResponse
