@@ -35,9 +35,11 @@ Every page in your javascript application is backed by a Twig template which ret
     body: post.body
 }) %}
 
-{# Use the Inertia variable to return the Page component to render, and the props to pass down #}
+{# Use the inertia variable to define the Page component to render and props to pass #}
 {{ inertia('Posts/Index', { posts: posts }) }}
 ```
+
+Note: templates are passed `element` variables automatically when a request is matched to an element. If you want to pass the element as a prop automatically to your page component, set the `injectElementAsProp` configuration to `true`.
 
 ## Shared Data
 
@@ -65,6 +67,33 @@ Create a `shared.twig` at the root of your `/templates` directory, and use the `
 
 {{ inertiaShare(shareProps) }}
 ```
+
+## Saving Data
+
+Craft CMS does not use traditional POST, PUT, PATCH, and DELETE requests for saving data, and instead uses the `action` parameter to hit various internal Craft controllers. This means saving data to Craft CMS data is a little different than what is expected in a traditional Inertia application.
+
+```js
+const form = useForm({
+  sectionId: 1,
+  typeId: 2,
+  CRAFT_CSRF_TOKEN: csrf.value,
+  action: "entries/save-entry",
+  title: "My New Post",
+  fields: {
+    customField: "My Custom Field Value",
+  },
+});
+
+const saveEntry = () => {
+  // Don't specify a POST url, as we're using the action parameter
+  form.post("", {
+    // Force the request to use form data in order for Craft to process the request
+    forceFormData: true,
+  });
+};
+```
+
+We hope to simplify this boilerplate for saving data by final 1.0.0 release.
 
 ## Configuration
 
