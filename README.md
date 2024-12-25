@@ -6,7 +6,7 @@ This is a server-side adapter for [Inertia](https://inertiajs.com) built with Cr
 
 It utilizes Craft's routing, as well as _Twig_ for crafting Inertia responses, rather than requiring they be written directly in PHP (as a traditional Inertia application does).
 
-[Demo project](https://github.com/rareformlabs/pingcrm)
+[Ping CRM Demo](https://pingcrm.rareformlabs.com) — [Ping CRM Repo](https://github.com/rareformlabs/pingcrm)
 
 ## Installation
 
@@ -19,9 +19,9 @@ php craft plugin/install inertia
 
 Be sure to follow the installation instructions for the [client-side framework](https://inertiajs.com/client-side-setup) you use.
 
-## Required Reading
-
-The [Inertia documentation](https://inertiajs.com) is a must-read to understand the protocol, the responsibilities of this adapter, and how to use Inertia on the client-side. The following sections will explain how to use this adapter, but assume you have a basic understanding of Inertia.
+> [!IMPORTANT]
+> ## Required Reading
+> The [Inertia documentation](https://inertiajs.com) is a must-read to understand the protocol, the responsibilities of this adapter, and how to use Inertia on the client-side. The following sections will explain how to use this adapter, but assume you have a basic understanding of Inertia.
 
 ## Defining Pages
 
@@ -93,7 +93,25 @@ const saveEntry = () => {
 };
 ```
 
-We hope to simplify this boilerplate for saving data by final 1.0.0 release.
+> [!TIP]
+> If using Vue 3 on your frontend, you can install the `inertia-helper` npm plugin which simplifies the process by automatically handling the CSRF token injection and removing the `forceFormData` option requirement:
+
+```js
+import useForm from "inertia-helper";
+```
+
+```js
+const form = useForm({
+  title: "My New Post",
+  sectionId: 1,
+  typeId: 2,
+  fields: {
+    customField: "My Custom Field Value",
+  },
+});
+
+const saveEntry = () => form.post("entries/save-entry");
+```
 
 ## Configuration
 
