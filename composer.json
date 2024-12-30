@@ -1,7 +1,6 @@
 {
   "name": "rareform/craft-inertia",
   "description": "Inertia.js adapter for Craft CMS",
-  "version": "1.0.0-alpha.3",
   "type": "craft-plugin",
   "license": "MIT",
   "require": {
