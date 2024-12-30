@@ -126,10 +126,56 @@ class BaseController extends Controller
         $baseView = Inertia::getInstance()->settings->view;
         $template = $inertiaDirectory ? $inertiaDirectory . '/' . $baseView : $baseView;
 
+        $view = Craft::$app->getView();
+
         // First request: Return full template
-        return Craft::$app->view->renderTemplate($template, [
+        $output = $view->renderTemplate($template, [
             'page' => $params
         ]);
+
+        // Get debug module
+        $debug = Craft::$app->getModule('debug', false);
+        if ($debug) {
+            // Inject debug toolbar
+            $output = $this->injectYiiDebugToolbar($debug, $output, $view);
+        }
+
+        return $output;
+    }
+
+    private function injectYiiDebugToolbar($debug, string $input, $view): string
+    {
+        // Start output buffering
+        ob_start();
+
+        // Set up minimal debug module to get toolbar HTML
+        $debug = Craft::$app->getModule('debug', false);
+
+        // Get debug toolbar
+        $event = new \yii\base\Event();
+        $event->sender = $view;
+        $debug->renderToolbar($event);
+
+        // Get all buffered content
+        $fullOutput = ob_get_clean();
+
+        // Insert debug output before closing body tag
+        return str_replace('</body>', $fullOutput . '</body>', $input);
+
+        // Alternative Method
+        // // Capture toolbar HTML
+        // $toolbarHtml = $debug->getToolbarHtml();
+
+        // // Get assets
+        // $yiiDebugPath = Craft::getAlias('@vendor/yiisoft/yii2-debug/src');
+        // $toolbarCss = file_get_contents($yiiDebugPath . '/assets/css/toolbar.css');
+        // $toolbarJs = file_get_contents($yiiDebugPath . '/assets/js/toolbar.js');
+
+        // // Combine and inject
+        // $debugAssets = $toolbarHtml . "<style>{$toolbarCss}</style><script>{$toolbarJs}</script>";
+        // $output = str_replace('</body>', $debugAssets . '</body>', $output);
+
+        // return $output;
     }
 
     /**
