@@ -194,7 +194,7 @@ class BaseController extends Controller
             $session->remove('recentElementSave');
         }
 
-        $sharedProps = $this->getSharedPropsFromTemplate();
+        $sharedProps = $this->getSharedPropsFromTemplates();
         $mergedParams = array_merge($sharedProps, $params);
         return $this->resolvePartialProps($mergedParams, $view);
     }
@@ -304,26 +304,45 @@ class BaseController extends Controller
         return [$matchesTwigTemplate, $specifiedTemplate, $templateVariables];
     }
 
-    private function getSharedPropsFromTemplate()
+    private function getSharedPropsFromTemplates()
     {
         $inertiaConfiguredDirectory = Inertia::getInstance()->settings->inertiaDirectory ?? null;
-        $inertiaTemplatePath = $inertiaConfiguredDirectory ? $inertiaConfiguredDirectory . '/shared' : 'shared';
+        $sharedDir = $inertiaConfiguredDirectory ? $inertiaConfiguredDirectory . '/_shared' : '_shared';
 
-        $matchesTwigTemplate = Craft::$app->getView()->doesTemplateExist($inertiaTemplatePath);
+        // Get the path to templates directory
+        $templatesPath = Craft::$app->getPath()->getSiteTemplatesPath();
+        $sharedPath = $templatesPath . DIRECTORY_SEPARATOR . $sharedDir;
 
-        if (!$matchesTwigTemplate) {
+        if (!is_dir($sharedPath)) {
             return [];
         }
 
-        $stringResponse = Craft::$app->getView()->renderTemplate($inertiaTemplatePath);
+        $allSharedProps = [];
 
-        // Decode JSON object from $stringResponse
-        $jsonData = json_decode($stringResponse, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('Failed to decode JSON response: ' . json_last_error_msg());
+        // Read all .twig and .html files in the _shared directory
+        $files = array_merge(
+            glob($sharedPath . DIRECTORY_SEPARATOR . '*.twig'),
+            glob($sharedPath . DIRECTORY_SEPARATOR . '*.html')
+        );
+
+        foreach ($files as $file) {
+            $templatePath = $sharedDir . DIRECTORY_SEPARATOR . basename($file);
+
+            if (Craft::$app->getView()->doesTemplateExist($templatePath)) {
+                $stringResponse = Craft::$app->getView()->renderTemplate($templatePath);
+
+                // Decode JSON object from each template
+                $jsonData = json_decode($stringResponse, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    Craft::warning('Failed to decode JSON response from ' . basename($file) . ': ' . json_last_error_msg(), __METHOD__);
+                    continue;
+                }
+
+                $allSharedProps = array_merge($allSharedProps, $jsonData);
+            }
         }
 
-        return $jsonData;
+        return $allSharedProps;
     }
 
 }
