@@ -57,7 +57,7 @@ Create a `_shared` directory at the root of your `/templates` directory, and use
 }) }}
 ```
 This allows more flexibility for designating responses you may want to cache to reduce unnecessary repetitive queries.
-```
+```twig
 {# templates/_shared/current-user.twig #}
 
 {% if currentUser %}
