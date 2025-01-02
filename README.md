@@ -43,29 +43,35 @@ Note: templates are passed `element` variables automatically when a request is m
 
 ## Shared Data
 
-Shared data will automatically be passed as props to your application, sparing you the cumbersome tasks of redefining the same prop data in every page response.
+Shared data will automatically be passed as props to your application, sparing you the cumbersome tasks of redefining the same prop data in every page response. You can create multiple files for different shared prop responses.
 
-Create a `shared.twig` at the root of your `/templates` directory, and use the `inertiaShare` variable:
+Create a `_shared` directory at the root of your `/templates` directory, and use the `inertiaShare` variable:
 
 ```twig
-{# templates/shared.twig #}
+{# templates/_shared/index.twig #}
 
-{% set sharedProps = {
+{{ inertiaShare({
    flashes: craft.app.session.getAllFlashes(true),
    csrfTokenValue: craft.app.request.csrfToken,
    csrfTokenName: craft.app.config.general.csrfTokenName
-} %}
+}) }}
+```
+This allows more flexibility for designating responses you may want to cache to reduce unnecessary repetitive queries.
+```
+{# templates/_shared/current-user.twig #}
 
 {% if currentUser %}
-  {% set user = {
-    id: currentUser.id,
-    fullName: currentUser.fullName,
-    email: currentUser.email,
-  } %}
-  {% set sharedProps = sharedProps|merge({currentUser: user}) %}
+  {% cache using key currentUser.email %}
+    {% set user = {
+      id: currentUser.id,
+      fullName: currentUser.fullName,
+      email: currentUser.email,
+    } %}
+    {{ inertiaShare({ currentUser: user }) }}
+  {% endcache %}
+{% else %}
+  {{ inertiaShare({ currentUser: null }) }}
 {% endif %}
-
-{{ inertiaShare(shareProps) }}
 ```
 
 ## Saving Data
