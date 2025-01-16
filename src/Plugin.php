@@ -229,7 +229,9 @@ class Plugin extends BasePlugin
             Element::EVENT_AFTER_SAVE,
             function (ModelEvent $event) {
                 $element = $event->sender;
-                Craft::$app->session->set('recentElementSave', $element->id);
+                if (!Craft::$app->request->isConsoleRequest) {
+                    Craft::$app->session->set('recentElementSave', $element->id);
+                }
             }
         );
     }
