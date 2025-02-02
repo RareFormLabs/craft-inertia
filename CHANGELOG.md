@@ -1,5 +1,10 @@
 # Release Notes for Inertia
 
+## 1.0.0-alpha.5 - 2025-02-01
+
+- Fix console error
+- Improve error stack trace handling
+
 ## 1.0.0-alpha.4 - 2025-01-01
 
 - Shared props are now gathered from all .twig/.html files in `_shared` directory.
