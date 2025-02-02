@@ -56,9 +56,24 @@ class BaseController extends Controller
 
             try {
                 $stringResponse = Craft::$app->getView()->renderTemplate($template, $templateVariables);
+            } catch (\Twig\Error\RuntimeError $e) {
+                $sourceContext = $e->getSourceContext();
+                $templateFile = $sourceContext ? $sourceContext->getName() : 'unknown template';
+                $templateLine = $e->getTemplateLine();
+            
+                Craft::error(
+                    sprintf(
+                        'Template rendering failed: %s in %s on line %d',
+                        $e->getMessage(),
+                        $templateFile,
+                        $templateLine
+                    ),
+                    __METHOD__
+                );
+                throw $e;
             } catch (\Exception $e) {
-                Craft::error('Template rendering failed: ' . $e->getMessage(), __METHOD__);
-                throw new \Exception('Template rendering failed: ' . $e->getMessage());
+                Craft::error($e->__toString(), __METHOD__);
+                throw $e;
             }
 
             // Decode JSON object from $stringResponse
