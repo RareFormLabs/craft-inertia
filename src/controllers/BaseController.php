@@ -55,7 +55,11 @@ class BaseController extends Controller
             }
 
             try {
-                $stringResponse = Craft::$app->getView()->renderTemplate($template, $templateVariables);
+                // Process any reference comments in the template first
+                $processedTemplate = $this->processTemplateReferences($template);
+                
+                // Render the processed template
+                $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
             } catch (\Twig\Error\RuntimeError $e) {
                 $sourceContext = $e->getSourceContext();
                 $templateFile = $sourceContext ? $sourceContext->getName() : 'unknown template';
@@ -358,6 +362,43 @@ class BaseController extends Controller
         }
 
         return $allSharedProps;
+    }
+
+    private function processTemplateReferences(string $template): string
+    {
+        $view = Craft::$app->getView();
+        
+        // Store original template mode and switch to site mode
+        $originalMode = $view->getTemplateMode();
+        $view->setTemplateMode($view::TEMPLATE_MODE_SITE);
+        
+        try {
+            // Find the actual template file
+            $templatePath = $view->resolveTemplate($template);
+            if (!$templatePath) {
+                throw new \Exception("Template not found: {$template}");
+            }
+            
+            // Read the template contents
+            $templateContent = file_get_contents($templatePath);
+            
+            // Process any reference comments
+            $pattern = '/\{#\s*reference\s+[\'"]([^\'"]+)[\'"]\s*#\}/';
+            $processedContent = preg_replace_callback($pattern, function($matches) use ($view) {
+                $referencedTemplate = $matches[1];
+                $referencedPath = $view->resolveTemplate($referencedTemplate);
+                if (!$referencedPath) {
+                    return ''; // Or handle the error as needed
+                }
+                return file_get_contents($referencedPath);
+            }, $templateContent);
+            
+            return $processedContent;
+            
+        } finally {
+            // Restore original template mode
+            $view->setTemplateMode($originalMode);
+        }
     }
 
 }
