@@ -1,5 +1,9 @@
 # Release Notes for Inertia
 
+## 1.0.0-beta.1 - 2025-02-22
+
+- Add `pull` tag DX helper for sharing variables across templates.
+
 ## 1.0.0-alpha.5 - 2025-02-01
 
 - Fix console error
