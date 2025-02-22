@@ -381,15 +381,21 @@ class BaseController extends Controller
             
             // Read the template contents
             $templateContent = file_get_contents($templatePath);
-            
-            // Process any reference comments
-            $pattern = '/\{#\s*reference\s+[\'"]([^\'"]+)[\'"]\s*#\}/';
+
+            // This pattern will match {% inherit('path') %}
+            $pattern = '/\{%\s*inherit\s*\(\s*([^\)]+)\s*\)\s*%\}/';
+
             $processedContent = preg_replace_callback($pattern, function($matches) use ($view) {
-                $referencedTemplate = $matches[1];
-                $referencedPath = $view->resolveTemplate($referencedTemplate);
+                $inheritPath = trim($matches[1]);
+
+                $directPath = trim($inheritPath, "'\"");
+                $referencedPath = $view->resolveTemplate($directPath);
+                
                 if (!$referencedPath) {
+                    Craft::warning("Template not found: {$inheritPath}", __METHOD__);
                     return ''; // Or handle the error as needed
                 }
+                
                 return file_get_contents($referencedPath);
             }, $templateContent);
             
