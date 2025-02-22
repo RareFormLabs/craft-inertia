@@ -48,6 +48,8 @@ class BaseController extends Controller
             $template = $specifiedTemplate ?? $inertiaTemplatePath;
 
             if (Craft::$container->has('currentElement')) {
+// We're probably validating an element in a form
+// And need to give to give it the user to get validation errors
                 // We're probably validating an element in a form
                 // And need to give to give it the user to get validation errors
                 $element = Craft::$container->get('currentElement');
@@ -55,8 +57,8 @@ class BaseController extends Controller
             }
 
             try {
-                // Process any reference comments in the template first
-                $processedTemplate = $this->processTemplateReferences($template);
+                // Process any inheritance in the template first
+                $processedTemplate = $this->processTemplateInheritance($template);
                 
                 // Render the processed template
                 $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
@@ -364,7 +366,7 @@ class BaseController extends Controller
         return $allSharedProps;
     }
 
-    private function processTemplateReferences(string $template): string
+    private function processTemplateInheritance(string $template): string
     {
         $view = Craft::$app->getView();
         
