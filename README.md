@@ -21,6 +21,7 @@ You can install this plugin from the Plugin Store or with Composer.
 Go to the Plugin Store in your project’s Control Panel and search for “Inertia”. Then press “Install”.
 
 #### With Composer:
+
 Open your terminal and run the following commands:
 
 ```sh
@@ -34,7 +35,9 @@ Be sure to follow the installation instructions for the [client-side framework](
 > Upon installing, the Inertia adapter will takeover all routing and expect all templates to respond with inertia protocol responses. To prevent this, you may set the `takeoverRouting` [config option](#configuration) to `false`
 
 > [!IMPORTANT]
+>
 > ## Required Reading
+>
 > The [Inertia documentation](https://inertiajs.com) is a must-read to understand the protocol, the responsibilities of this adapter, and how to use Inertia on the client-side. The following sections will explain how to use this adapter, but assume you have a basic understanding of Inertia.
 
 ## Defining Pages
@@ -70,7 +73,9 @@ Create a `_shared` directory at the root of your `/templates` directory, and use
    csrfTokenName: craft.app.config.general.csrfTokenName
 }) }}
 ```
+
 This allows more flexibility for designating responses you may want to cache to reduce unnecessary repetitive queries.
+
 ```twig
 {# templates/_shared/current-user.twig #}
 
@@ -87,6 +92,24 @@ This allows more flexibility for designating responses you may want to cache to 
   {{ inertiaShare({ currentUser: null }) }}
 {% endif %}
 ```
+
+## Pull in Variables
+
+Use the `pull` tag to include variables from a specified template and make them available in the current response twig file.
+
+```twig
+{# teams/_base.twig #}
+{% set teamColor = "#EE4B2B" %}
+```
+
+```twig
+{# templates/teams/_entry.twig #}
+{% pull('teams/_base') %}
+
+{{ inertia('Teams/Entry', { teamColor: teamColor }) }}
+```
+
+This is a simple DX alternative to using `extends` and `block` tags to share variables across templates. Note that the `pull` tag is only available in Inertia responses.
 
 ## Saving Data
 
@@ -178,4 +201,3 @@ return [
     'takeoverRouting' => true,
 ];
 ```
-

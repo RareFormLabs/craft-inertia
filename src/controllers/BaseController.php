@@ -48,8 +48,6 @@ class BaseController extends Controller
             $template = $specifiedTemplate ?? $inertiaTemplatePath;
 
             if (Craft::$container->has('currentElement')) {
-// We're probably validating an element in a form
-// And need to give to give it the user to get validation errors
                 // We're probably validating an element in a form
                 // And need to give to give it the user to get validation errors
                 $element = Craft::$container->get('currentElement');
@@ -57,8 +55,8 @@ class BaseController extends Controller
             }
 
             try {
-                // Process any inheritance in the template first
-                $processedTemplate = $this->processTemplateInheritance($template);
+                // Process any pulls in the template first
+                $processedTemplate = $this->processTemplatePulls($template);
                 
                 // Render the processed template
                 $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
@@ -366,7 +364,10 @@ class BaseController extends Controller
         return $allSharedProps;
     }
 
-    private function processTemplateInheritance(string $template): string
+    /**
+     * Process any template pull tags in the template
+     */
+    private function processTemplatePulls(string $template): string
     {
         $view = Craft::$app->getView();
         
@@ -384,17 +385,17 @@ class BaseController extends Controller
             // Read the template contents
             $templateContent = file_get_contents($templatePath);
 
-            // This pattern will match {% inherit('path') %}
-            $pattern = '/\{%\s*inherit\s*\(\s*([^\)]+)\s*\)\s*%\}/';
+            // This pattern will match {% pull('path') %}
+            $pattern = '/\{%\s*pull\s*\(\s*([^\)]+)\s*\)\s*%\}/';
 
             $processedContent = preg_replace_callback($pattern, function($matches) use ($view) {
-                $inheritPath = trim($matches[1]);
+                $pullPath = trim($matches[1]);
 
-                $directPath = trim($inheritPath, "'\"");
+                $directPath = trim($pullPath, "'\"");
                 $referencedPath = $view->resolveTemplate($directPath);
                 
                 if (!$referencedPath) {
-                    Craft::warning("Template not found: {$inheritPath}", __METHOD__);
+                    Craft::warning("Template not found: {$pullPath}", __METHOD__);
                     return ''; // Or handle the error as needed
                 }
                 
