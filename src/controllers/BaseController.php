@@ -55,7 +55,11 @@ class BaseController extends Controller
             }
 
             try {
-                $stringResponse = Craft::$app->getView()->renderTemplate($template, $templateVariables);
+                // Process any pulls in the template first
+                $processedTemplate = $this->processTemplatePulls($template);
+                
+                // Render the processed template
+                $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
             } catch (\Twig\Error\RuntimeError $e) {
                 $sourceContext = $e->getSourceContext();
                 $templateFile = $sourceContext ? $sourceContext->getName() : 'unknown template';
@@ -358,6 +362,52 @@ class BaseController extends Controller
         }
 
         return $allSharedProps;
+    }
+
+    /**
+     * Process any template pull tags in the template
+     */
+    private function processTemplatePulls(string $template): string
+    {
+        $view = Craft::$app->getView();
+        
+        // Store original template mode and switch to site mode
+        $originalMode = $view->getTemplateMode();
+        $view->setTemplateMode($view::TEMPLATE_MODE_SITE);
+        
+        try {
+            // Find the actual template file
+            $templatePath = $view->resolveTemplate($template);
+            if (!$templatePath) {
+                throw new \Exception("Template not found: {$template}");
+            }
+            
+            // Read the template contents
+            $templateContent = file_get_contents($templatePath);
+
+            // This pattern will match {% pull('path') %}
+            $pattern = '/\{%\s*pull\s*\(\s*([^\)]+)\s*\)\s*%\}/';
+
+            $processedContent = preg_replace_callback($pattern, function($matches) use ($view) {
+                $pullPath = trim($matches[1]);
+
+                $directPath = trim($pullPath, "'\"");
+                $referencedPath = $view->resolveTemplate($directPath);
+                
+                if (!$referencedPath) {
+                    Craft::warning("Template not found: {$pullPath}", __METHOD__);
+                    return ''; // Or handle the error as needed
+                }
+                
+                return file_get_contents($referencedPath);
+            }, $templateContent);
+            
+            return $processedContent;
+            
+        } finally {
+            // Restore original template mode
+            $view->setTemplateMode($originalMode);
+        }
     }
 
 }
