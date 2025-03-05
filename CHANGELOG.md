@@ -1,5 +1,10 @@
 # Release Notes for Inertia
 
+## 1.0.0-beta.2 - 2025-03-04
+
+- Fix routing takeover for non-Craft elements
+- Automatically load `entry` & `category` variables when route is matched to those elements. Remove generic `element` variable.
+
 ## 1.0.0-beta.1 - 2025-02-22
 
 - Add `pull` tag DX helper for sharing variables across templates.
