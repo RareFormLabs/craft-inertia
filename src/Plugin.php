@@ -8,6 +8,8 @@ use rareform\inertia\web\twig\InertiaExtension;
 use craft\base\Element;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
+use craft\elements\Entry;
+use craft\elements\Category;
 use craft\events\RegisterTemplateRootsEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\SetElementRouteEvent;
@@ -203,6 +205,12 @@ class Plugin extends BasePlugin
             Element::class,
             Element::EVENT_SET_ROUTE,
             function (SetElementRouteEvent $event) {
+                $element = $event->sender;
+                if (!$element) return;
+                
+                $isCraftElement = $element instanceof Entry || $element instanceof Category;
+                if (!$isCraftElement) return;
+
                 $event->route = 'inertia/base/index';
 
                 // Explicitly tell the element that a route has been set,

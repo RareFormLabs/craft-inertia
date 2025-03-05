@@ -5,6 +5,8 @@ namespace rareform\inertia\controllers;
 use Craft;
 use craft\web\UrlManager;
 use Illuminate\Support\Arr;
+use craft\elements\Entry;
+use craft\elements\Category;
 use craft\services\Elements;
 
 use yii\web\NotFoundHttpException;
@@ -51,7 +53,11 @@ class BaseController extends Controller
                 // We're probably validating an element in a form
                 // And need to give to give it the user to get validation errors
                 $element = Craft::$container->get('currentElement');
-                $templateVariables['element'] = $element;
+                if ($element instanceof Entry) {
+                    $templateVariables['entry'] = $element;
+                } else if ($element instanceof Category) {
+                    $templateVariables['category'] = $element;
+                }
             }
 
             try {
@@ -294,30 +300,35 @@ class BaseController extends Controller
 
     private function handleElementRequest($element, $uri)
     {
-        $section = $element->getSection();
+        $sectionOrGroup = $element instanceof Entry ? $element->getSection() : $element->getGroup();
 
         $site = Craft::$app->getSites()->getCurrentSite();
         $siteID = $site->id;
 
-        /** @var array $sectionSiteSettings */
-        $sectionSiteSettings = $section->getSiteSettings();
-        $sectionSiteSetting = null;
-        foreach ($sectionSiteSettings as $setting) {
+        /** @var array $siteSettings */
+        $siteSettings = $sectionOrGroup->getSiteSettings();
+        $siteSetting = null;
+        foreach ($siteSettings as $setting) {
             if ($setting->siteId === $siteID) {
-                $sectionSiteSetting = $setting;
+                $siteSetting = $setting;
                 break;
             }
         }
 
-        if ($sectionSiteSetting === null) {
+        if ($siteSetting === null) {
             throw new \Exception('No section site setting found for the current site.');
         }
 
-        $uriFormat = $sectionSiteSetting->uriFormat;
+        $uriFormat = $siteSetting->uriFormat;
 
-        $specifiedTemplate = $sectionSiteSetting->template;
+        $specifiedTemplate = $siteSetting->template;
         $templateVariables = $this->extractUriParameters($uri, $uriFormat);
-        $templateVariables['element'] = $element;
+
+        if  ($element instanceof Entry) {
+            $templateVariables['entry'] = $element;
+        } elseif ($element instanceof Category) {
+            $templateVariables['category'] = $element;
+        }
 
         $matchesTwigTemplate = Craft::$app->getView()->doesTemplateExist($specifiedTemplate);
         return [$matchesTwigTemplate, $specifiedTemplate, $templateVariables];
