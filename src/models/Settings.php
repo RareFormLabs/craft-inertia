@@ -33,7 +33,7 @@ class Settings extends Model
     public array $assetsDirs = ['@webroot/assets'];
 
     /**
-     * Whether to inject the element automatically into the frontend response
+     * Whether to inject the element (`entry` or `category`) automatically into the frontend response
      * @var bool
      */
     public bool $injectElementAsProp = false;
