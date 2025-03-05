@@ -97,7 +97,8 @@ class BaseController extends Controller
             $props = $jsonData['props'] ?? [];
 
             if (Inertia::getInstance()->settings->injectElementAsProp !== true) {
-                unset($templateVariables['element']);
+                unset($templateVariables['entry']);
+                unset($templateVariables['category']);
             }
 
             // Merge $props with $templateVariables, $props takes precedence
