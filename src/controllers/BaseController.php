@@ -64,48 +64,90 @@ class BaseController extends Controller
                 // Process any pulls in the template first
                 $processedTemplate = $this->processTemplatePulls($template);
                 
-                // Render the processed template
-                $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
-            } catch (\Twig\Error\RuntimeError $e) {
-                $sourceContext = $e->getSourceContext();
-                $templateFile = $sourceContext ? $sourceContext->getName() : 'unknown template';
-                $templateLine = $e->getTemplateLine();
-            
-                Craft::error(
-                    sprintf(
-                        'Template rendering failed: %s in %s on line %d',
-                        $e->getMessage(),
-                        $templateFile,
-                        $templateLine
-                    ),
-                    __METHOD__
-                );
-                throw $e;
+                // Will store template variables that get set during rendering
+                $capturedVariables = [];
+                $component = null;
+                $explicitProps = [];
+                
+                // Get the final captured variables from template context after rendering
+                $stringResponse = '';
+                try {
+                    // First, create functions to capture data during template rendering
+                    Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('__captureInertiaVar', function($name, $value) use (&$capturedVariables) {
+                        $capturedVariables[$name] = $value;
+                        return $value;
+                    }));
+                    
+                    // Add a function to directly capture component and props
+                    Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('inertia', function($componentName, $props = []) use (&$component, &$explicitProps) {
+                        $component = $componentName;
+                        $explicitProps = $props;
+                        return json_encode(['component' => $componentName, 'props' => $props]);
+                    }));
+                    
+                    // Modify the template to capture set variables
+                    $processedTemplate = preg_replace(
+                        '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/m',
+                        '{% set $1 = __captureInertiaVar("$1", $2) %}',
+                        $processedTemplate
+                    );
+                    
+                    // Render the processed template
+                    $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
+                    
+                    // If no component was specified using the inertia() function,
+                    // try to parse it from the output as before for backward compatibility
+                    if ($component === null) {
+                        // Decode JSON object from $stringResponse
+                        $jsonData = json_decode($stringResponse, true);
+                        if (json_last_error() !== JSON_ERROR_NONE) {
+                            // If we can't decode JSON, log it and use default values
+                            Craft::warning('JSON decoding failed: ' . json_last_error_msg() . '. Using default component and props.', __METHOD__);
+                            // Set default component based on route
+                            $component = $uri ?: 'Index';
+                            $explicitProps = [];
+                        } else {
+                            $component = $jsonData['component'] ?? ($uri ?: 'Index');
+                            $explicitProps = $jsonData['props'] ?? [];
+                        }
+                    }
+                } catch (\Twig\Error\RuntimeError $e) {
+                    $sourceContext = $e->getSourceContext();
+                    $templateFile = $sourceContext ? $sourceContext->getName() : 'unknown template';
+                    $templateLine = $e->getTemplateLine();
+                
+                    Craft::error(
+                        sprintf(
+                            'Template rendering failed: %s in %s on line %d',
+                            $e->getMessage(),
+                            $templateFile,
+                            $templateLine
+                        ),
+                        __METHOD__
+                    );
+                    throw $e;
+                } catch (\Exception $e) {
+                    Craft::error($e->__toString(), __METHOD__);
+                    throw $e;
+                }
+
+                if (Inertia::getInstance()->settings->injectElementAsProp !== true) {
+                    unset($templateVariables['entry']);
+                    unset($templateVariables['category']);
+                }
+
+                // Merge variables in priority order: 
+                // 1. Template variables passed from controller (lowest)
+                // 2. Variables set in the template itself via {% set %}
+                // 3. Explicitly defined props in JSON response or via inertia() function (highest)
+                $props = array_merge($templateVariables, $capturedVariables, $explicitProps);
+
+                return $this->render($component, params: $props);
             } catch (\Exception $e) {
-                Craft::error($e->__toString(), __METHOD__);
+                Craft::error('Error processing Inertia template: ' . $e->getMessage(), __METHOD__);
                 throw $e;
             }
-
-            // Decode JSON object from $stringResponse
-            $jsonData = json_decode($stringResponse, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                Craft::error('JSON decoding failed: ' . json_last_error_msg(), __METHOD__);
-                throw new \Exception('Failed to decode JSON response.');
-            }
-
-            $component = $jsonData['component'];
-            $props = $jsonData['props'] ?? [];
-
-            if (Inertia::getInstance()->settings->injectElementAsProp !== true) {
-                unset($templateVariables['entry']);
-                unset($templateVariables['category']);
-            }
-
-            // Merge $props with $templateVariables, $props takes precedence
-            $props = array_merge($templateVariables, $props);
-
-            return $this->render($component, params: $props);
-        } else {
+            
             throw new NotFoundHttpException('No matching template found');
         }
     }
