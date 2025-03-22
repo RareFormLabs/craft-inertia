@@ -7,6 +7,7 @@ use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use craft\helpers\Json;
+use rareform\Prune;
 
 /**
  * Twig extension
@@ -19,6 +20,7 @@ class InertiaExtension extends AbstractExtension
             new TwigFilter('recursive_merge', [$this, 'recursiveMergeFilter']),
             new TwigFilter('set', [$this, 'setFilter']),
             new TwigFilter('add', [$this, 'addFilter']),
+            new TwigFilter('prune', [$this, 'pruneDataFilter']),
         ];
     }
 
@@ -34,12 +36,41 @@ class InertiaExtension extends AbstractExtension
             new TwigFunction('inertiaShare', function ($props) {
                 return Json::encode($props);
             }, ['is_safe' => ['html']]),
+            new TwigFunction('prune', [$this, 'pruneDataFilter']),
         ];
     }
 
     public function getTests()
     {
         return [];
+    }
+
+    /**
+     * Prunes data according to the provided definition.
+     * Preserves original data structure (array or single object).
+     *
+     * Examples:
+     * - Simple field list: {{ entry|prune(['title', 'url']) }}
+     * - Object syntax: {{ entry|prune({title: true, body: true}) }}
+     * - Related fields: {{ entry|prune({author: ['name', 'email']}) }}
+     * - Matrix fields: {{ entry|prune({contentBlocks: {$limit: 10, _text: {body: true}}}) }}
+     *
+     * @param mixed $data Data to be pruned 
+     * @param mixed $pruneDefinition Definition that determines what data to keep
+     * @return mixed Pruned data in original format (array or single object)
+     */
+    public function pruneDataFilter($data, $pruneDefinition)
+    {
+        $helper = new Prune();
+        $result = $helper->pruneData($data, $pruneDefinition);
+        
+        // The PruneHelper always returns an array
+        // If original data was not an array, return the first element
+        if (!is_array($data)) {
+            return $result[0] ?? null;
+        }
+        
+        return $result;
     }
 
     /**
