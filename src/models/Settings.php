@@ -61,4 +61,10 @@ class Settings extends Model
      * @var string|null
      */
     public string|null $sharedPath = null;
+
+    /**
+     * Whether to capture template variables set via {% set %} and make them available as props
+     * @var bool
+     */
+    public bool $captureTemplateVariables = false;
 }

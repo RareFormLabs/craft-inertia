@@ -72,25 +72,31 @@ class BaseController extends Controller
                 // Get the final captured variables from template context after rendering
                 $stringResponse = '';
                 try {
-                    // First, create functions to capture data during template rendering
-                    Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('__captureInertiaVar', function($name, $value) use (&$capturedVariables) {
-                        $capturedVariables[$name] = $value;
-                        return $value;
-                    }));
+                    // Check if variable capturing is enabled in settings
+                    $captureVariables = Inertia::getInstance()->settings->captureTemplateVariables ?? false;
                     
-                    // Add a function to directly capture component and props
+                    // Add the inertia function regardless of the setting
                     Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('inertia', function($componentName, $props = []) use (&$component, &$explicitProps) {
                         $component = $componentName;
                         $explicitProps = $props;
                         return json_encode(['component' => $componentName, 'props' => $props]);
                     }));
                     
-                    // Modify the template to capture set variables
-                    $processedTemplate = preg_replace(
-                        '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/m',
-                        '{% set $1 = __captureInertiaVar("$1", $2) %}',
-                        $processedTemplate
-                    );
+                    // Only add variable capturing if the setting is enabled
+                    if ($captureVariables) {
+                        // Create function to capture data during template rendering
+                        Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('__captureInertiaVar', function($name, $value) use (&$capturedVariables) {
+                            $capturedVariables[$name] = $value;
+                            return $value;
+                        }));
+                        
+                        // Modify the template to capture set variables
+                        $processedTemplate = preg_replace(
+                            '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/m',
+                            '{% set $1 = __captureInertiaVar("$1", $2) %}',
+                            $processedTemplate
+                        );
+                    }
                     
                     // Render the processed template
                     $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
