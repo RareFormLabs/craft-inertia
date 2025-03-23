@@ -93,6 +93,20 @@ This allows more flexibility for designating responses you may want to cache to 
 {% endif %}
 ```
 
+## Automatic Variable Capturing
+
+You can enable automatic capturing of variables set with `{% set %}` in your twig files and have them passed as props to your Inertia components. This provides a cleaner, more intuitive way to pass data to your frontend without explicitly defining props.
+
+Enable this feature in your config:
+
+```php
+// config/inertia.php
+return [
+    // ...other settings
+    'autoCaptureVariables' => true,
+];
+```
+
 ## Pull in Variables
 
 Use the `pull` tag to include variables from a specified template and make them available in the current response twig file.
@@ -199,5 +213,11 @@ return [
      * '<catchall:.+>' => 'inertia/base/index',
      */
     'takeoverRouting' => true,
+
+    /**
+     * Whether to enable automatic capturing of variables set with `{% set %}` in your twig files
+     * and have them passed as props to your Inertia components.
+     */
+    'autoCaptureVariables' => false,
 ];
 ```
