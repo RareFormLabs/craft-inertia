@@ -66,5 +66,5 @@ class Settings extends Model
      * Whether to capture template variables set via {% set %} and make them available as props
      * @var bool
      */
-    public bool $captureTemplateVariables = false;
+    public bool $autoCaptureVariables = false;
 }
