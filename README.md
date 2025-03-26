@@ -107,6 +107,51 @@ return [
 ];
 ```
 
+### Prune Filter
+
+With all variables being automatically captured and passed as props, you're inevitably going to have some large objects that you don't want to pass to your frontend. You can use the `prune` filter or function to remove properties from objects that are passed to your Inertia component.
+
+```twig
+{% set post = craft.entries.section('blog').one() %}
+
+{# Basic usage: simply pass an array of fields #}
+{% set post = blogPost|prune(["title", "author", "body", "url", "featuredImage"]) %}
+
+{# Advanced object syntax #}
+{% set post = blogPost|prune(
+  {
+    title: true,
+    id: true,
+    uri: true,
+    <!-- Related fields simple array syntax -->
+    author: ["username", "email"],
+    <!-- Related fields object syntax -->
+    mainImage: {
+      url: true,
+      uploader: {
+        <!-- Nested related fields -->
+        email: true,
+        username: true,
+      },
+    },
+    <!-- Matrix fields -->
+    contentBlocks: {
+      <!-- Denote query traits with $ prefix -->
+      <!-- https://www.yiiframework.com/doc/api/2.0/yii-db-querytrait -->
+      "$limit": 10,
+      <!-- Designate distinct prune fields per type with _ prefix -->
+      _body: {
+        body: true,
+        intro: true,
+      },
+      _fullWidthImage: {
+        image: ["url", "alt"],
+      },
+    },
+  }
+) %}
+```
+
 ## Pull in Variables
 
 Use the `pull` tag to include variables from a specified template and make them available in the current response twig file.
