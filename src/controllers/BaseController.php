@@ -10,9 +10,11 @@ use craft\elements\Category;
 use craft\services\Elements;
 
 use yii\web\NotFoundHttpException;
+use yii\web\View;
 
 use craft\web\Controller as Controller;
 use rareform\inertia\Plugin as Inertia;
+use rareform\inertia\web\assets\axioshook\AxiosHookAsset;
 
 /**
  * Controller controller
@@ -202,10 +204,31 @@ class BaseController extends Controller
 
         $view = Craft::$app->getView();
 
+        // Register our asset bundle
+        $view->registerAssetBundle(AxiosHookAsset::class, View::POS_END);
+
         // First request: Return full template
         $output = $view->renderTemplate($template, [
             'page' => $params
         ]);
+
+        $assetBundles = $view->assetBundles;
+
+        foreach ($assetBundles as $bundle) {
+            // Inject Javascript files into the output
+            $baseUrl = $bundle->baseUrl;
+            $jsFiles = $bundle->js;
+
+            $jsScripts = '';
+            foreach ($jsFiles as $jsFile) {
+                $jsFile = $baseUrl . '/' . $jsFile;
+                $jsScripts .= '<script src="' . $jsFile . '"></script>' . PHP_EOL;
+            }
+
+            if (!empty($jsScripts)) {
+                $output = str_replace('</body>', $jsScripts . '</body>', $output);
+            }
+        }
 
         // Get debug module
         $debug = Craft::$app->getModule('debug', false);
