@@ -138,12 +138,24 @@ const configureAxios = async () => {
 };
 
 const checkForAxios = async () => {
+  const MAX_ATTEMPTS = 40; // 10 seconds total (50 * 200ms)
+  let attempts = 0;
+
   const intervalCheck = setInterval(async () => {
     if (window.axios) {
       clearInterval(intervalCheck);
       await configureAxios();
+      return;
     }
-  }, 100);
+
+    attempts++;
+    if (attempts >= MAX_ATTEMPTS) {
+      clearInterval(intervalCheck);
+      console.warn(
+        "Inertia (Craft): Axios not found after 10 seconds. CSRF protection may not be active."
+      );
+    }
+  }, 250);
 };
 
 checkForAxios();
