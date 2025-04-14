@@ -172,7 +172,9 @@ This is a simple DX alternative to using `extends` and `block` tags to share var
 
 ## Saving Data
 
-Craft CMS does not use traditional POST, PUT, PATCH, and DELETE requests for saving data, and instead uses the `action` parameter to hit various internal Craft controllers. This means saving data to Craft CMS data is a little different than what is expected in a traditional Inertia application.
+Craft CMS does not use traditional POST, PUT, PATCH, and DELETE requests for saving data, and instead uses the `action` parameter to when POSTing to various internal Craft controllers. This means saving data to Craft CMS data is a little different than what is expected in a traditional Inertia application.
+
+Here's an example of how you could save an entry using Inertia's `useForm` helper **without** using the adapter's javascript helper:
 
 ```js
 const form = useForm({
@@ -195,11 +197,13 @@ const saveEntry = () => {
 };
 ```
 
-> [!TIP]
-> If using Vue 3 on your frontend, you can install the `inertia-helper` npm plugin which simplifies the process by automatically handling the CSRF token injection and removing the `forceFormData` option requirement:
+Attaching the CSRF token, the action param, and the `forceFormData` option is required for Craft to process the request correctly, **but it's recommended to use the adapter's helper to remove this repetitive boilerplate.**
+
+The adapter will automatically attach the CSRF token, action param, and set the `forceFormData` option to `true` for you, but needs access to the axios instance used by Inertia's native library. All that's needed on your end is to attach Axios to the window object, and the adapter will take care of the rest.
 
 ```js
-import useForm from "inertia-helper";
+import axios from "axios";
+window.axios = axios;
 ```
 
 ```js
@@ -214,6 +218,14 @@ const form = useForm({
 
 const saveEntry = () => form.post("entries/save-entry");
 ```
+
+This looks much better. You can optionally reduce one extra step the helper takes by rendering the CSRF token info in your base template's head:
+
+```twig
+<meta csrf name="{{ craft.app.config.general.csrfTokenName }}" content="{{ craft.app.request.csrfToken }}">
+```
+
+This extra step reduces additional fetch requests to Craft's sessions endpoint to get the CSRF token manually for unauthenticated users.
 
 ## Configuration
 
