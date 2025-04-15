@@ -1,5 +1,13 @@
 # Release Notes for Inertia
 
+## 1.0.0-beta.4 - 2025-04-14
+
+- Adds Axios hook for CSRF handling & form submission DX improvements
+
+## 1.0.0-beta.3 - 2025-03-26
+
+- Adds auto variable capture functionality
+
 ## 1.0.0-beta.2 - 2025-03-04
 
 - Fix routing takeover for non-Craft elements
