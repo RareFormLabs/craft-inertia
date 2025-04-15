@@ -50,8 +50,6 @@ const getActionPath = (url: string) => {
   return pathWithoutSlash;
 };
 
-// const storeCsrfOnMeta = (csrfTokenName, csrfTokenValue) => {
-
 const getTokenFromMeta = (): csrfMeta | null => {
   const csrfMetaEl = document.head.querySelector("meta[csrf]");
   if (!csrfMetaEl) {
