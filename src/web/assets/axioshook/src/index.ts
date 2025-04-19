@@ -125,7 +125,7 @@ const configureAxios = async () => {
   // Add a response interceptor
   (window.axios as AxiosInstance).interceptors.response.use(
     async (response) => {
-      if (response.config.data.get("action") == "users/login") {
+      if (response.config.data?.get("action") == "users/login") {
         await getSessionInfo().then((sessionInfo) => {
           setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
         });

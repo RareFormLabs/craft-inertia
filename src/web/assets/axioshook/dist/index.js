@@ -40,9 +40,12 @@ const l = (t) => {
     }
     return t;
   }), window.axios.interceptors.response.use(
-    async (t) => (t.config.data.get("action") == "users/login" && await s().then((n) => {
-      c(n.csrfTokenName, n.csrfTokenValue);
-    }), t)
+    async (t) => {
+      var n;
+      return ((n = t.config.data) == null ? void 0 : n.get("action")) == "users/login" && await s().then((e) => {
+        c(e.csrfTokenName, e.csrfTokenValue);
+      }), t;
+    }
   );
 }, d = async () => {
   let n = 0;
