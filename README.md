@@ -199,7 +199,11 @@ const saveEntry = () => {
 
 Attaching the CSRF token, the action param, and the `forceFormData` option is required for Craft to process the request correctly, **but it's recommended to use the adapter's helper to remove this repetitive boilerplate.**
 
-The adapter will automatically attach the CSRF token, action param, and set the `forceFormData` option to `true` for you, but needs access to the axios instance used by Inertia's native library. All that's needed on your end is to attach Axios to the window object, and the adapter will take care of the rest.
+### Using the Adapter's Helper
+
+The adapter will automatically attach the CSRF token, action param, and set the `forceFormData` option to `true` for you, but needs access to the same Axios instance used by Inertia's native library.
+
+For the majority of projects, all that's needed on your end is to attach Axios to the window object. The adapter will take care of the rest. (Having issues? Visit troubleshooting section below)
 
 ```js
 import axios from "axios";
@@ -277,4 +281,41 @@ return [
      */
     'autoCaptureVariables' => false,
 ];
+```
+
+## Troubleshooting
+
+### Error HTTP 400 – Bad Request : Unable to verify your data submission
+
+This error is usually caused by the CSRF token not being passed correctly with the form data.
+
+If you manually stored the CSRF token in a meta tag in your base template, make sure you are using the correct name for the token. The default name is `CRAFT_CSRF_TOKEN`, but it can be changed in your Craft config.
+
+[If you attached Axios to the window object](#using-the-adapters-Helper), make sure you are using the same instance of Axios that Inertia is using. If you have multiple versions of Axios installed (independently or through other packages) and are using Vite, you can resolve this by adding an alias to your Vite config:
+
+```js
+import { defineConfig } from "vite";
+import path from "path";
+
+export default defineConfig({
+  // ...other config
+  resolve: {
+    alias: {
+      axios: path.resolve(
+        __dirname,
+        "node_modules/@inertiajs/core/node_modules/axios"
+      ),
+    },
+  },
+});
+```
+
+Another way to resolve this is to use the `resolutions` field in your `package.json` file to force all packages to use the same version of Axios.
+
+```json
+{
+  "resolutions": {
+    "axios": "^1.x.x" // Specify the exact version Inertia uses
+  }
+}
 ```
