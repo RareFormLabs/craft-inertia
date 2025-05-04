@@ -28,7 +28,7 @@ class BaseController extends Controller
      * inertia/controller action
      */
 
-    public function actionIndex(): array|string
+    public function actionIndex(): craft\web\Response|string|array
     {
         $request = Craft::$app->getRequest();
         $uri = $request->getPathInfo();
@@ -182,7 +182,7 @@ class BaseController extends Controller
      * @param array $params
      * @return array|string
      */
-    public function render($view, $params = []): array|string
+    public function render($view, $params = []): craft\web\Response|string|array
     {
         // Set params as expected in Inertia protocol
         // https://inertiajs.com/the-protocol
@@ -207,37 +207,9 @@ class BaseController extends Controller
         // Register our asset bundle
         $view->registerAssetBundle(AxiosHookAsset::class, View::POS_END);
 
-        // First request: Return full template
-        $output = $view->renderTemplate($template, [
+        return parent::renderTemplate($template, [
             'page' => $params
         ]);
-
-        $assetBundles = $view->assetBundles;
-
-        foreach ($assetBundles as $bundle) {
-            // Inject Javascript files into the output
-            $baseUrl = $bundle->baseUrl;
-            $jsFiles = $bundle->js;
-
-            $jsScripts = '';
-            foreach ($jsFiles as $jsFile) {
-                $jsFile = $baseUrl . '/' . $jsFile;
-                $jsScripts .= '<script src="' . $jsFile . '"></script>' . PHP_EOL;
-            }
-
-            if (!empty($jsScripts)) {
-                $output = str_replace('</body>', $jsScripts . '</body>', $output);
-            }
-        }
-
-        // Get debug module
-        $debug = Craft::$app->getModule('debug', false);
-        if ($debug) {
-            // Inject debug toolbar
-            $output = $this->injectYiiDebugToolbar($debug, $output, $view);
-        }
-
-        return $output;
     }
 
     private function injectYiiDebugToolbar($debug, string $input, $view): string
