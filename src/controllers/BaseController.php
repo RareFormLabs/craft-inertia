@@ -94,7 +94,7 @@ class BaseController extends Controller
                         
                         // Modify the template to capture set variables
                         $processedTemplate = preg_replace(
-                            '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/m',
+                            '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/ms',
                             '{% set $1 = __captureInertiaVar("$1", $2) %}',
                             $processedTemplate
                         );
