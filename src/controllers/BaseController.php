@@ -87,7 +87,7 @@ class BaseController extends Controller
                     // Only add variable capturing if the setting is enabled
                     if ($captureVariables) {
                         // Create function to capture data during template rendering
-                        Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('__captureInertiaVar', function($name, $value) use (&$capturedVariables) {
+                        Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('prop', function($name, $value) use (&$capturedVariables) {
                             $capturedVariables[$name] = $value;
                             return $value;
                         }));
@@ -95,7 +95,7 @@ class BaseController extends Controller
                         // Modify the template to capture set variables
                         $processedTemplate = preg_replace(
                             '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/ms',
-                            '{% set $1 = __captureInertiaVar("$1", $2) %}',
+                            '{% set $1 = prop("$1", $2) %}',
                             $processedTemplate
                         );
                     }
