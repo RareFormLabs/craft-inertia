@@ -37,6 +37,10 @@ class InertiaExtension extends AbstractExtension
                 return Json::encode($props);
             }, ['is_safe' => ['html']]),
             new TwigFunction('prune', [$this, 'pruneDataFilter']),
+            new TwigFunction('prop', function ($name, $value = null) {
+                // This is a placeholder; actual capturing is handled in the controller
+                return $value;
+            }),
         ];
     }
 

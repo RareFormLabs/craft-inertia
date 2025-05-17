@@ -84,15 +84,15 @@ class BaseController extends Controller
                         return json_encode(['component' => $componentName, 'props' => $props]);
                     }));
                     
+                    // Always register the capturing version of prop
+                    Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('prop', function($name, $value) use (&$capturedVariables) {
+                        $capturedVariables[$name] = $value;
+                        return $value;
+                    }));
+                    
                     // Only add variable capturing if the setting is enabled
                     if ($captureVariables) {
-                        // Create function to capture data during template rendering
-                        Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('prop', function($name, $value) use (&$capturedVariables) {
-                            $capturedVariables[$name] = $value;
-                            return $value;
-                        }));
-                        
-                        // Modify the template to capture set variables
+                        // Auto-capture: rewrite all {% set foo = ... %} to {% set foo = prop('foo', ...) %}
                         $processedTemplate = preg_replace(
                             '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/ms',
                             '{% set $1 = prop("$1", $2) %}',
