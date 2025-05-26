@@ -74,9 +74,6 @@ class BaseController extends Controller
                 // Get the final captured variables from template context after rendering
                 $stringResponse = '';
                 try {
-                    // Check if variable capturing is enabled in settings
-                    $captureVariables = Inertia::getInstance()->settings->autoCaptureVariables ?? false;
-                    
                     // Add the inertia function regardless of the setting
                     Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('inertia', function($componentName, $props = []) use (&$component, &$explicitProps) {
                         $component = $componentName;
@@ -89,6 +86,9 @@ class BaseController extends Controller
                         $capturedVariables[$name] = $value;
                         return $value;
                     }));
+
+                    // Check if variable capturing is enabled in settings
+                    $captureVariables = Inertia::getInstance()->settings->autoCaptureVariables ?? false;
                     
                     // Only add variable capturing if the setting is enabled
                     if ($captureVariables) {
