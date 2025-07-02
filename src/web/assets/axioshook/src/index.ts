@@ -118,6 +118,35 @@ const configureAxios = async () => {
           ...config.data,
         };
       }
+
+      const contentType =
+        config.headers["Content-Type"] ||
+        config.headers["content-type"] ||
+        config.headers["CONTENT-TYPE"];
+
+      if (
+        typeof contentType === "string" &&
+        contentType.toLowerCase().includes("multipart/form-data")
+      ) {
+        // An empty array can't be represented in FormData
+        // Replace empty array values with empty strings
+        const replaceEmptyArrays = (obj: any): any => {
+          if (Array.isArray(obj)) {
+            return obj.map((item) => replaceEmptyArrays(item));
+          } else if (typeof obj === "object" && obj !== null) {
+            return Object.fromEntries(
+              Object.entries(obj).map(([key, value]) => [
+                key,
+                Array.isArray(value) && value.length === 0
+                  ? ""
+                  : replaceEmptyArrays(value),
+              ])
+            );
+          }
+          return obj;
+        };
+        config.data = replaceEmptyArrays(config.data);
+      }
     }
     return config;
   });
