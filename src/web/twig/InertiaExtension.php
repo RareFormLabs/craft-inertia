@@ -27,20 +27,33 @@ class InertiaExtension extends AbstractExtension
     public function getFunctions()
     {
         return [
+            // Legacy inertia() function
             new TwigFunction('inertia', function ($component, $props = []) {
+                // Store in global context for controller to pick up
+                \Craft::$app->params['inertiaComponent'] = $component;
+                \Craft::$app->params['inertiaExplicitProps'] = $props;
                 return Json::encode([
                     'component' => $component,
                     'props' => $props,
                 ]);
             }, ['is_safe' => ['html']]),
+            // New component() function
+            new TwigFunction('component', function ($component) {
+                \Craft::$app->params['__inertia_component'] = $component;
+                return '';
+            }),
+            // New prop() function
+            new TwigFunction('prop', function ($name, $value = null) {
+                if (!isset(\Craft::$app->params['__inertia_props'])) {
+                    \Craft::$app->params['__inertia_props'] = [];
+                }
+                \Craft::$app->params['__inertia_props'][$name] = $value;
+                return null;
+            }),
             new TwigFunction('inertiaShare', function ($props) {
                 return Json::encode($props);
             }, ['is_safe' => ['html']]),
             new TwigFunction('prune', [$this, 'pruneDataFilter']),
-            new TwigFunction('prop', function ($name, $value = null) {
-                // This is a placeholder; actual capturing is handled in the controller
-                return $value;
-            }),
         ];
     }
 

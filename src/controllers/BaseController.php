@@ -70,26 +70,11 @@ class BaseController extends Controller
                 $capturedVariables = [];
                 $component = null;
                 $explicitProps = [];
-                
                 // Get the final captured variables from template context after rendering
                 $stringResponse = '';
                 try {
-                    // Add the inertia function regardless of the setting
-                    Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('inertia', function($componentName, $props = []) use (&$component, &$explicitProps) {
-                        $component = $componentName;
-                        $explicitProps = $props;
-                        return json_encode(['component' => $componentName, 'props' => $props]);
-                    }));
-                    
-                    // Always register the capturing version of prop
-                    Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('prop', function($name, $value) use (&$capturedVariables) {
-                        $capturedVariables[$name] = $value;
-                        return $value;
-                    }));
-
                     // Check if variable capturing is enabled in settings
                     $captureVariables = Inertia::getInstance()->settings->autoCaptureVariables ?? false;
-                    
                     // Only add variable capturing if the setting is enabled
                     if ($captureVariables) {
                         // Auto-capture: rewrite all {% set foo = ... %} to {% set foo = prop('foo', ...) %}
@@ -99,12 +84,24 @@ class BaseController extends Controller
                             $processedTemplate
                         );
                     }
-                    
                     // Render the processed template
+                    // $stringResponse = Craft::$app->getView()->renderString($processedTemplate, []);
                     $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
-                    
-                    // If no component was specified using the inertia() function,
-                    // try to parse it from the output as before for backward compatibility
+
+                    // Legacy inertia() function support
+                    $legacyComponent = \Craft::$app->has('inertiaComponent') ? \Craft::$app->get('inertiaComponent') : null;
+                    $legacyExplicitProps = \Craft::$app->has('inertiaExplicitProps') ? \Craft::$app->get('inertiaExplicitProps') : [];
+
+                    if ($legacyComponent) {
+                        $component = $legacyComponent;
+                        $explicitProps = $legacyExplicitProps;
+                    } else {
+                        // New pattern: collect from Craft::$app->params
+                        $component = Craft::$app->params['__inertia_component'] ?? null;
+                        $explicitProps = Craft::$app->params['__inertia_props'] ?? [];
+                    }
+
+                    // Fallback: try to parse from output as before
                     if ($component === null) {
                         // Decode JSON object from $stringResponse
                         $jsonData = json_decode($stringResponse, true);
@@ -123,7 +120,6 @@ class BaseController extends Controller
                     $sourceContext = $e->getSourceContext();
                     $templateFile = $sourceContext ? $sourceContext->getName() : 'unknown template';
                     $templateLine = $e->getTemplateLine();
-                
                     Craft::error(
                         sprintf(
                             'Template rendering failed: %s in %s on line %d',
@@ -147,7 +143,7 @@ class BaseController extends Controller
                 // Merge variables in priority order: 
                 // 1. Template variables passed from controller (lowest)
                 // 2. Variables set in the template itself via {% set %}
-                // 3. Explicitly defined props in JSON response or via inertia() function (highest)
+                // 3. Explicitly defined props in JSON response or via inertia()/component/prop (highest)
                 $props = array_merge($templateVariables, $capturedVariables, $explicitProps);
 
                 return $this->render($component, params: $props);
