@@ -87,25 +87,7 @@ class BaseController extends Controller
                         // New pattern: collect from Craft::$app->params
                         $page = Craft::$app->params['__inertia_page'] ?? null;
 
-                        // Extract all prop JSON strings from HTML comment markers first
-                        $props = [];
-                        $jsonProps = [];
-                        if (preg_match_all('/<!--INERTIA_PROP:(\{.*?\})-->/s', $stringResponse, $matches)) {
-                            $jsonProps = $matches[1];
-                        }
-                        // Parse and merge, checking for duplicate keys
-                        foreach ($jsonProps as $json) {
-                            $propArr = json_decode($json, true);
-                            if (is_array($propArr)) {
-                                foreach ($propArr as $key => $val) {
-                                    if (array_key_exists($key, $props)) {
-                                        Craft::warning("Duplicate Inertia prop key '$key' detected in template output. Skipping duplicate to avoid overwriting.", __METHOD__);
-                                        continue;
-                                    }
-                                    $props[$key] = $val;
-                                }
-                            }
-                        }
+                        $props = $this->extractInertiaPropsFromString($stringResponse);
                     }
 
                     // Fallback: try to parse from output as before
@@ -380,6 +362,35 @@ class BaseController extends Controller
         return [$matchesTwigTemplate, $specifiedTemplate, $templateVariables];
     }
 
+    /**
+     * Extracts Inertia props from a string using the HTML comment marker format.
+     * Optionally merges into an existing array and logs duplicate keys with a custom message.
+     *
+     * @param string $stringResponse
+     * @param array $existingProps
+     * @return array
+     */
+    private function extractInertiaPropsFromString(string $stringResponse, array $existingProps = []): array
+    {
+        $jsonProps = [];
+        if (preg_match_all('/<!--INERTIA_PROP:(\{.*?\})-->/s', $stringResponse, $matches)) {
+            $jsonProps = $matches[1];
+        }
+        foreach ($jsonProps as $json) {
+            $propArr = json_decode($json, true);
+            if (is_array($propArr)) {
+                foreach ($propArr as $key => $val) {
+                    if (array_key_exists($key, $existingProps)) {
+                        Craft::warning("Duplicate Inertia prop '$key' detected in template output. Skipping duplicate to avoid overwriting.", __METHOD__);
+                        continue;
+                    }
+                    $existingProps[$key] = $val;
+                }
+            }
+        }
+        return $existingProps;
+    }
+
     private function getSharedPropsFromTemplates()
     {
         $inertiaConfiguredDirectory = Inertia::getInstance()->settings->inertiaDirectory ?? null;
@@ -406,15 +417,7 @@ class BaseController extends Controller
 
             if (Craft::$app->getView()->doesTemplateExist($templatePath)) {
                 $stringResponse = Craft::$app->getView()->renderTemplate($templatePath);
-
-                // Decode JSON object from each template
-                $jsonData = json_decode($stringResponse, true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    Craft::warning('Failed to decode JSON response from ' . basename($file) . ': ' . json_last_error_msg(), __METHOD__);
-                    continue;
-                }
-
-                $allSharedProps = array_merge($allSharedProps, $jsonData);
+                $allSharedProps = $this->extractInertiaPropsFromString($stringResponse, $allSharedProps);
             }
         }
 
