@@ -68,7 +68,7 @@ class BaseController extends Controller
                 
                 // Will store template variables that get set during rendering
                 $capturedVariables = [];
-                $component = null;
+                $page = null;
                 $explicitProps = [];
                 // Get the final captured variables from template context after rendering
                 $stringResponse = '';
@@ -77,17 +77,15 @@ class BaseController extends Controller
                     $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
 
                     // Legacy inertia() function support
-                    $legacyComponent = \Craft::$app->has('inertiaComponent') ? \Craft::$app->get('inertiaComponent') : null;
-                    $legacyExplicitProps = \Craft::$app->has('inertiaExplicitProps') ? \Craft::$app->get('inertiaExplicitProps') : [];
+                    $legacyPage = Craft::$app->has('inertiaPage') ? \Craft::$app->get('inertiaPage') : null;
+                    $legacyExplicitProps = Craft::$app->has('inertiaExplicitProps') ? Craft::$app->get('inertiaExplicitProps') : [];
 
-                    if ($legacyComponent) {
-                        $component = $legacyComponent;
+                    if ($legacyPage) {
+                        $page = $legacyPage;
                         $explicitProps = $legacyExplicitProps;
                     } else {
                         // New pattern: collect from Craft::$app->params
-                        $component = Craft::$app->params['__inertia_page'] ?? null;
-                        // We intentionally do NOT use $explicitProps = Craft::$app->params['__inertia_props'] ?? [];
-                        // because per-prop caching requires extracting props from the rendered output, not from params.
+                        $page = Craft::$app->params['__inertia_page'] ?? null;
 
                         // Extract all prop JSON strings from HTML comment markers first
                         $explicitProps = [];
@@ -111,17 +109,17 @@ class BaseController extends Controller
                     }
 
                     // Fallback: try to parse from output as before
-                    if ($component === null) {
+                    if ($page === null) {
                         // Decode JSON object from $stringResponse
                         $jsonData = json_decode($stringResponse, true);
                         if (json_last_error() !== JSON_ERROR_NONE) {
                             // If we can't decode JSON, log it and use default values
-                            Craft::warning('JSON decoding failed: ' . json_last_error_msg() . '. Using default component and props.', __METHOD__);
-                            // Set default component based on route
-                            $component = $uri ?: 'Index';
+                            Craft::warning('JSON decoding failed: ' . json_last_error_msg() . '. Using default page component and props.', __METHOD__);
+                            // Set default page component based on route
+                            $page = $uri ?: 'Index';
                             $explicitProps = [];
                         } else {
-                            $component = $jsonData['component'] ?? ($uri ?: 'Index');
+                            $page = $jsonData['component'] ?? ($uri ?: 'Index');
                             $explicitProps = $jsonData['props'] ?? [];
                         }
                     }
@@ -151,11 +149,10 @@ class BaseController extends Controller
 
                 // Merge variables in priority order: 
                 // 1. Template variables passed from controller (lowest)
-                // 2. Variables set in the template itself via {% set %}
-                // 3. Explicitly defined props in JSON response or via inertia()/component/prop (highest)
-                $props = array_merge($templateVariables, $capturedVariables, $explicitProps);
+                // 2. Explicitly defined props in JSON response or via inertia()/page/prop (highest)
+                $props = array_merge($templateVariables, $explicitProps);
 
-                return $this->render($component, params: $props);
+                return $this->render($page, params: $props);
             } catch (\Exception $e) {
                 Craft::error('Error processing Inertia template: ' . $e->getMessage(), __METHOD__);
                 throw $e;
