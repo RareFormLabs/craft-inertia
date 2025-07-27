@@ -47,13 +47,13 @@ Every page in your javascript application is backed by a Twig template which ret
 ```twig
 {# templates/posts/index.twig #}
 
-{% set posts = craft.entries.section('posts').limit(20).all() | map(post => {
+{{ prop('posts', craft.entries.section('posts').limit(20).all() | map(post => {
     title: post.title,
     body: post.body
-}) %}
+})) }}
 
 {# Use the inertia variable to define the Page component to render and props to pass #}
-{{ inertia('Posts/Index', { posts: posts }) }}
+{{ page('Posts/Index') }}
 ```
 
 Note: templates are passed element variables (`entry` or `category`) automatically when the route is matched to either element type. If you want to pass the element as a prop automatically to your page component, set the `injectElementAsProp` configuration to `true`.
@@ -62,12 +62,12 @@ Note: templates are passed element variables (`entry` or `category`) automatical
 
 Shared data will automatically be passed as props to your application, sparing you the cumbersome tasks of redefining the same prop data in every page response. You can create multiple files for different shared prop responses.
 
-Create a `_shared` directory at the root of your `/templates` directory, and use the `inertiaShare` variable:
+Create a `_shared` directory at the root of your `/templates` directory, and use the `share` variable:
 
 ```twig
 {# templates/_shared/index.twig #}
 
-{{ inertiaShare({
+{{ share({
    flashes: craft.app.session.getAllFlashes(true),
    csrfTokenValue: craft.app.request.csrfToken,
    csrfTokenName: craft.app.config.general.csrfTokenName
@@ -86,25 +86,23 @@ This allows more flexibility for designating responses you may want to cache to 
       fullName: currentUser.fullName,
       email: currentUser.email,
     } %}
-    {{ inertiaShare({ currentUser: user }) }}
+    {{ share({ currentUser: user }) }}
   {% endcache %}
 {% else %}
-  {{ inertiaShare({ currentUser: null }) }}
+  {{ share({ currentUser: null }) }}
 {% endif %}
 ```
 
 ### Prune Filter
 
-With all variables being automatically captured and passed as props, you're inevitably going to have some large objects that you don't want to pass to your frontend. You can use the `prune` filter or function to remove properties from objects that are passed to your Inertia component.
+You're inevitably going to have some large objects that you don't want to pass to your frontend. You can use the `prune` filter or function to remove properties from objects that are passed to your Inertia component.
 
 ```twig
-{% set post = craft.entries.section('blog').one() %}
-
 {# Basic usage: simply pass an array of fields #}
-{% set post = blogPost|prune(["title", "author", "body", "url", "featuredImage"]) %}
+{{ prop('post', craft.entries.section('blog').all()|prune(["title", "author", "body", "url", "featuredImage"])) }}
 
 {# Advanced object syntax #}
-{% set post = blogPost|prune(
+{{ prop('post', craft.entries.section('blog').all()|prune(
   {
     title: true,
     id: true,
@@ -135,7 +133,7 @@ With all variables being automatically captured and passed as props, you're inev
       },
     },
   }
-) %}
+)) }}
 ```
 
 ## Pull in Variables
@@ -151,7 +149,8 @@ Use the `pull` tag to include variables from a specified template and make them 
 {# templates/teams/_entry.twig #}
 {% pull('teams/_base') %}
 
-{{ inertia('Teams/Entry', { teamColor: teamColor }) }}
+{{ page('Teams/Entry') }}
+{{ prop('teamColor', teamColor) }}
 ```
 
 This is a simple DX alternative to using `extends` and `block` tags to share variables across templates. Note that the `pull` tag is only available in Inertia responses.
