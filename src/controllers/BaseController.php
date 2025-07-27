@@ -68,62 +68,47 @@ class BaseController extends Controller
                 
                 // Will store template variables that get set during rendering
                 $capturedVariables = [];
-                $component = null;
-                $explicitProps = [];
-                
+                $page = null;
+                $props = [];
                 // Get the final captured variables from template context after rendering
                 $stringResponse = '';
                 try {
-                    // Add the inertia function regardless of the setting
-                    Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('inertia', function($componentName, $props = []) use (&$component, &$explicitProps) {
-                        $component = $componentName;
-                        $explicitProps = $props;
-                        return json_encode(['component' => $componentName, 'props' => $props]);
-                    }));
-                    
-                    // Always register the capturing version of prop
-                    Craft::$app->getView()->getTwig()->addFunction(new \Twig\TwigFunction('prop', function($name, $value) use (&$capturedVariables) {
-                        $capturedVariables[$name] = $value;
-                        return $value;
-                    }));
-
-                    // Check if variable capturing is enabled in settings
-                    $captureVariables = Inertia::getInstance()->settings->autoCaptureVariables ?? false;
-                    
-                    // Only add variable capturing if the setting is enabled
-                    if ($captureVariables) {
-                        // Auto-capture: rewrite all {% set foo = ... %} to {% set foo = prop('foo', ...) %}
-                        $processedTemplate = preg_replace(
-                            '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/ms',
-                            '{% set $1 = prop("$1", $2) %}',
-                            $processedTemplate
-                        );
-                    }
-                    
                     // Render the processed template
                     $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
-                    
-                    // If no component was specified using the inertia() function,
-                    // try to parse it from the output as before for backward compatibility
-                    if ($component === null) {
+
+                    // Legacy inertia() function support
+                    $legacyPage = Craft::$app->has('inertiaPage') ? \Craft::$app->get('inertiaPage') : null;
+                    $legacyProps = Craft::$app->has('inertiaProps') ? Craft::$app->get('inertiaProps') : [];
+
+                    if ($legacyPage) {
+                        $page = $legacyPage;
+                        $props = $legacyProps;
+                    } else {
+                        // New pattern: collect from Craft::$app->params
+                        $page = Craft::$app->params['__inertia_page'] ?? null;
+
+                        $props = $this->extractInertiaPropsFromString($stringResponse);
+                    }
+
+                    // Fallback: try to parse from output as before
+                    if ($page === null) {
                         // Decode JSON object from $stringResponse
                         $jsonData = json_decode($stringResponse, true);
                         if (json_last_error() !== JSON_ERROR_NONE) {
                             // If we can't decode JSON, log it and use default values
-                            Craft::warning('JSON decoding failed: ' . json_last_error_msg() . '. Using default component and props.', __METHOD__);
-                            // Set default component based on route
-                            $component = $uri ?: 'Index';
-                            $explicitProps = [];
+                            Craft::warning('JSON decoding failed: ' . json_last_error_msg() . '. Using default page component and props.', __METHOD__);
+                            // Set default page component based on route
+                            $page = $uri ?: 'Index';
+                            $props = [];
                         } else {
-                            $component = $jsonData['component'] ?? ($uri ?: 'Index');
-                            $explicitProps = $jsonData['props'] ?? [];
+                            $page = $jsonData['component'] ?? ($uri ?: 'Index');
+                            $props = $jsonData['props'] ?? [];
                         }
                     }
                 } catch (\Twig\Error\RuntimeError $e) {
                     $sourceContext = $e->getSourceContext();
                     $templateFile = $sourceContext ? $sourceContext->getName() : 'unknown template';
                     $templateLine = $e->getTemplateLine();
-                
                     Craft::error(
                         sprintf(
                             'Template rendering failed: %s in %s on line %d',
@@ -146,11 +131,10 @@ class BaseController extends Controller
 
                 // Merge variables in priority order: 
                 // 1. Template variables passed from controller (lowest)
-                // 2. Variables set in the template itself via {% set %}
-                // 3. Explicitly defined props in JSON response or via inertia() function (highest)
-                $props = array_merge($templateVariables, $capturedVariables, $explicitProps);
+                // 2. Explicitly defined props in JSON response or via inertia()/page/prop (highest)
+                $props = array_merge($templateVariables, $props);
 
-                return $this->render($component, params: $props);
+                return $this->render($page, params: $props);
             } catch (\Exception $e) {
                 Craft::error('Error processing Inertia template: ' . $e->getMessage(), __METHOD__);
                 throw $e;
@@ -378,6 +362,35 @@ class BaseController extends Controller
         return [$matchesTwigTemplate, $specifiedTemplate, $templateVariables];
     }
 
+    /**
+     * Extracts Inertia props from a string using the HTML comment marker format.
+     * Optionally merges into an existing array and logs duplicate keys with a custom message.
+     *
+     * @param string $stringResponse
+     * @param array $existingProps
+     * @return array
+     */
+    private function extractInertiaPropsFromString(string $stringResponse, array $existingProps = []): array
+    {
+        $jsonProps = [];
+        if (preg_match_all('/<!--INERTIA_PROP:(\{.*?\})-->/s', $stringResponse, $matches)) {
+            $jsonProps = $matches[1];
+        }
+        foreach ($jsonProps as $json) {
+            $propArr = json_decode($json, true);
+            if (is_array($propArr)) {
+                foreach ($propArr as $key => $val) {
+                    if (array_key_exists($key, $existingProps)) {
+                        Craft::warning("Duplicate Inertia prop '$key' detected in template output. Skipping duplicate to avoid overwriting.", __METHOD__);
+                        continue;
+                    }
+                    $existingProps[$key] = $val;
+                }
+            }
+        }
+        return $existingProps;
+    }
+
     private function getSharedPropsFromTemplates()
     {
         $inertiaConfiguredDirectory = Inertia::getInstance()->settings->inertiaDirectory ?? null;
@@ -404,15 +417,7 @@ class BaseController extends Controller
 
             if (Craft::$app->getView()->doesTemplateExist($templatePath)) {
                 $stringResponse = Craft::$app->getView()->renderTemplate($templatePath);
-
-                // Decode JSON object from each template
-                $jsonData = json_decode($stringResponse, true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    Craft::warning('Failed to decode JSON response from ' . basename($file) . ': ' . json_last_error_msg(), __METHOD__);
-                    continue;
-                }
-
-                $allSharedProps = array_merge($allSharedProps, $jsonData);
+                $allSharedProps = $this->extractInertiaPropsFromString($stringResponse, $allSharedProps);
             }
         }
 

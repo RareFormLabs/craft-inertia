@@ -2,6 +2,7 @@
 
 namespace rareform\inertia\web\twig;
 
+use Craft;
 use Twig\Error\RuntimeError;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
@@ -14,6 +15,7 @@ use rareform\Prune;
  */
 class InertiaExtension extends AbstractExtension
 {
+
     public function getFilters()
     {
         return [
@@ -24,23 +26,43 @@ class InertiaExtension extends AbstractExtension
         ];
     }
 
+    /**
+     * Outputs a JSON-like marker for controller parsing and stores the prop for controller collection.
+     */
+    public function prop($name, $value = null)
+    {
+        // Output a marker as an HTML comment for controller parsing
+        $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        if ($jsonValue === false) {
+            // Handle encoding error: throw or fallback
+            $error = json_last_error_msg();
+            throw new \RuntimeException("Failed to encode Inertia prop '$name' as JSON: $error");
+        }
+        return "<!--INERTIA_PROP:{\"$name\":$jsonValue}-->";
+    }
+
     public function getFunctions()
     {
         return [
-            new TwigFunction('inertia', function ($component, $props = []) {
+            // Legacy inertia() function
+            new TwigFunction('inertia', function ($page, $props = []) {
+                // Store in global context for controller to pick up
+                Craft::$app->params['inertiaPage'] = $page;
+                Craft::$app->params['inertiaProps'] = $props;
                 return Json::encode([
-                    'component' => $component,
+                    'component' => $page,
                     'props' => $props,
                 ]);
             }, ['is_safe' => ['html']]),
-            new TwigFunction('inertiaShare', function ($props) {
-                return Json::encode($props);
-            }, ['is_safe' => ['html']]),
-            new TwigFunction('prune', [$this, 'pruneDataFilter']),
-            new TwigFunction('prop', function ($name, $value = null) {
-                // This is a placeholder; actual capturing is handled in the controller
-                return $value;
+
+            new TwigFunction('page', function ($page) {
+                Craft::$app->params['__inertia_page'] = $page;
+                return '';
             }),
+
+            new TwigFunction('prop', [$this, 'prop'], ['is_safe' => ['html']]),
+
+            new TwigFunction('prune', [$this, 'pruneDataFilter']),
         ];
     }
 
