@@ -29,11 +29,15 @@ class InertiaExtension extends AbstractExtension
     /**
      * Outputs a JSON-like marker for controller parsing and stores the prop for controller collection.
      */
-    public function prop(\Twig\Environment $env, $name, $value = null)
+    public function prop($name, $value = null)
     {
         // Output a marker as an HTML comment for controller parsing
-        // Use json_encode for value, always
         $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        if ($jsonValue === false) {
+            // Handle encoding error: throw or fallback
+            $error = json_last_error_msg();
+            throw new \RuntimeException("Failed to encode Inertia prop '$name' as JSON: $error");
+        }
         return "<!--INERTIA_PROP:{\"$name\":$jsonValue}-->";
     }
 
@@ -56,7 +60,7 @@ class InertiaExtension extends AbstractExtension
                 return '';
             }),
 
-            new TwigFunction('prop', [$this, 'prop'], ['needs_environment' => true, 'is_safe' => ['html']]),
+            new TwigFunction('prop', [$this, 'prop'], ['is_safe' => ['html']]),
 
             new TwigFunction('prune', [$this, 'pruneDataFilter']),
         ];
