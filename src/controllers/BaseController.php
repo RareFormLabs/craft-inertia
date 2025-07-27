@@ -98,15 +98,25 @@ class BaseController extends Controller
                     } else {
                         // New pattern: collect from Craft::$app->params
                         $component = Craft::$app->params['__inertia_component'] ?? null;
-                        // $explicitProps = Craft::$app->params['__inertia_props'] ?? [];
+                        // We intentionally do NOT use $explicitProps = Craft::$app->params['__inertia_props'] ?? [];
+                        // because per-prop caching requires extracting props from the rendered output, not from params.
 
-                        // Try to extract individual prop markers from the rendered output (HTML comment markers)
+                        // Extract all prop JSON strings from HTML comment markers first
                         $explicitProps = [];
+                        $jsonProps = [];
                         if (preg_match_all('/<!--INERTIA_PROP:(\{.*?\})-->/s', $stringResponse, $matches)) {
-                            foreach ($matches[1] as $json) {
-                                $propArr = json_decode($json, true);
-                                if (is_array($propArr)) {
-                                    $explicitProps = array_merge($explicitProps, $propArr);
+                            $jsonProps = $matches[1];
+                        }
+                        // Parse and merge, checking for duplicate keys
+                        foreach ($jsonProps as $json) {
+                            $propArr = json_decode($json, true);
+                            if (is_array($propArr)) {
+                                foreach ($propArr as $key => $val) {
+                                    if (array_key_exists($key, $explicitProps)) {
+                                        Craft::warning("Duplicate Inertia prop key '$key' detected in template output. Skipping duplicate to avoid overwriting.", __METHOD__);
+                                        continue;
+                                    }
+                                    $explicitProps[$key] = $val;
                                 }
                             }
                         }

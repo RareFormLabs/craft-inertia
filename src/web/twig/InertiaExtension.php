@@ -31,14 +31,6 @@ class InertiaExtension extends AbstractExtension
      */
     public function prop(\Twig\Environment $env, $name, $value = null)
     {
-        // Store prop for controller collection
-        $params = Craft::$app->params;
-        if (!isset($params['__inertia_props'])) {
-            $params['__inertia_props'] = [];
-        }
-        $params['__inertia_props'][$name] = $value;
-        Craft::$app->params = $params;
-
         // Output a marker as an HTML comment for controller parsing
         // Use json_encode for value, always
         $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
