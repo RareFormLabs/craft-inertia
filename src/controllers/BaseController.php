@@ -73,19 +73,7 @@ class BaseController extends Controller
                 // Get the final captured variables from template context after rendering
                 $stringResponse = '';
                 try {
-                    // Check if variable capturing is enabled in settings
-                    $captureVariables = Inertia::getInstance()->settings->autoCaptureVariables ?? false;
-                    // Only add variable capturing if the setting is enabled
-                    if ($captureVariables) {
-                        // Auto-capture: rewrite all {% set foo = ... %} to {% set foo = prop('foo', ...) %}
-                        $processedTemplate = preg_replace(
-                            '/\{%\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*%\}/ms',
-                            '{% set $1 = prop("$1", $2) %}',
-                            $processedTemplate
-                        );
-                    }
                     // Render the processed template
-                    // $stringResponse = Craft::$app->getView()->renderString($processedTemplate, []);
                     $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
 
                     // Legacy inertia() function support

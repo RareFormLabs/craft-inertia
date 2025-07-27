@@ -93,20 +93,6 @@ This allows more flexibility for designating responses you may want to cache to 
 {% endif %}
 ```
 
-## Automatic Variable Capturing
-
-You can enable automatic capturing of variables set with `{% set %}` in your twig files and have them passed as props to your Inertia components. This provides a cleaner, more intuitive way to pass data to your frontend without explicitly defining props.
-
-Enable this feature in your config:
-
-```php
-// config/inertia.php
-return [
-    // ...other settings
-    'autoCaptureVariables' => true,
-];
-```
-
 ### Prune Filter
 
 With all variables being automatically captured and passed as props, you're inevitably going to have some large objects that you don't want to pass to your frontend. You can use the `prune` filter or function to remove properties from objects that are passed to your Inertia component.
@@ -274,12 +260,6 @@ return [
      * '<catchall:.+>' => 'inertia/base/index',
      */
     'takeoverRouting' => true,
-
-    /**
-     * Whether to enable automatic capturing of variables set with `{% set %}` in your twig files
-     * and have them passed as props to your Inertia components.
-     */
-    'autoCaptureVariables' => false,
 ];
 ```
 
