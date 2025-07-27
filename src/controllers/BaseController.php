@@ -69,7 +69,7 @@ class BaseController extends Controller
                 // Will store template variables that get set during rendering
                 $capturedVariables = [];
                 $page = null;
-                $explicitProps = [];
+                $props = [];
                 // Get the final captured variables from template context after rendering
                 $stringResponse = '';
                 try {
@@ -78,17 +78,17 @@ class BaseController extends Controller
 
                     // Legacy inertia() function support
                     $legacyPage = Craft::$app->has('inertiaPage') ? \Craft::$app->get('inertiaPage') : null;
-                    $legacyExplicitProps = Craft::$app->has('inertiaExplicitProps') ? Craft::$app->get('inertiaExplicitProps') : [];
+                    $legacyprops = Craft::$app->has('inertiaprops') ? Craft::$app->get('inertiaprops') : [];
 
                     if ($legacyPage) {
                         $page = $legacyPage;
-                        $explicitProps = $legacyExplicitProps;
+                        $props = $legacyprops;
                     } else {
                         // New pattern: collect from Craft::$app->params
                         $page = Craft::$app->params['__inertia_page'] ?? null;
 
                         // Extract all prop JSON strings from HTML comment markers first
-                        $explicitProps = [];
+                        $props = [];
                         $jsonProps = [];
                         if (preg_match_all('/<!--INERTIA_PROP:(\{.*?\})-->/s', $stringResponse, $matches)) {
                             $jsonProps = $matches[1];
@@ -98,11 +98,11 @@ class BaseController extends Controller
                             $propArr = json_decode($json, true);
                             if (is_array($propArr)) {
                                 foreach ($propArr as $key => $val) {
-                                    if (array_key_exists($key, $explicitProps)) {
+                                    if (array_key_exists($key, $props)) {
                                         Craft::warning("Duplicate Inertia prop key '$key' detected in template output. Skipping duplicate to avoid overwriting.", __METHOD__);
                                         continue;
                                     }
-                                    $explicitProps[$key] = $val;
+                                    $props[$key] = $val;
                                 }
                             }
                         }
@@ -117,10 +117,10 @@ class BaseController extends Controller
                             Craft::warning('JSON decoding failed: ' . json_last_error_msg() . '. Using default page component and props.', __METHOD__);
                             // Set default page component based on route
                             $page = $uri ?: 'Index';
-                            $explicitProps = [];
+                            $props = [];
                         } else {
                             $page = $jsonData['component'] ?? ($uri ?: 'Index');
-                            $explicitProps = $jsonData['props'] ?? [];
+                            $props = $jsonData['props'] ?? [];
                         }
                     }
                 } catch (\Twig\Error\RuntimeError $e) {
@@ -150,7 +150,7 @@ class BaseController extends Controller
                 // Merge variables in priority order: 
                 // 1. Template variables passed from controller (lowest)
                 // 2. Explicitly defined props in JSON response or via inertia()/page/prop (highest)
-                $props = array_merge($templateVariables, $explicitProps);
+                $props = array_merge($templateVariables, $props);
 
                 return $this->render($page, params: $props);
             } catch (\Exception $e) {

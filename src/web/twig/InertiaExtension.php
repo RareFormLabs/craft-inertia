@@ -44,7 +44,7 @@ class InertiaExtension extends AbstractExtension
             new TwigFunction('inertia', function ($page, $props = []) {
                 // Store in global context for controller to pick up
                 Craft::$app->params['inertiaPage'] = $page;
-                Craft::$app->params['inertiaExplicitProps'] = $props;
+                Craft::$app->params['inertiaProps'] = $props;
                 return Json::encode([
                     'component' => $page,
                     'props' => $props,
