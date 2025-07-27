@@ -47,10 +47,13 @@ Every page in your javascript application is backed by a Twig template which ret
 ```twig
 {# templates/posts/index.twig #}
 
-{{ prop('posts', craft.entries.section('posts').limit(20).all() | map(post => {
+{{ prop('posts', craft.entries.section('posts').limit(20).all()|map(post => {
     title: post.title,
     body: post.body
 })) }}
+
+{# Or use the prune filter #}
+{{ prop('posts', craft.entries.section('posts').limit(20).all()|prune(['title','body'])) }}
 
 {# Use the inertia variable to define the Page component to render and props to pass #}
 {{ page('Posts/Index') }}
@@ -60,21 +63,21 @@ Note: templates are passed element variables (`entry` or `category`) automatical
 
 ## Shared Data
 
-Shared data will automatically be passed as props to your application, sparing you the cumbersome tasks of redefining the same prop data in every page response. You can create multiple files for different shared prop responses.
+Shared data will automatically be passed as props to your application, sparing you the cumbersome tasks of redefining the same prop data in every page response. You can optionally separate any shared data logic into multiple files for organization.
 
-Create a `_shared` directory at the root of your `/templates` directory, and use the `share` variable:
+Create a `_shared` directory at the root of your `/templates` directory:
 
 ```twig
 {# templates/_shared/index.twig #}
 
-{{ share({
-   flashes: craft.app.session.getAllFlashes(true),
-   csrfTokenValue: craft.app.request.csrfToken,
-   csrfTokenName: craft.app.config.general.csrfTokenName
-}) }}
+{{ prop('flashes', craft.app.session.getAllFlashes(true)) }}
+
+{# Not typically necessary #}
+{{ prop('csrfTokenName', craft.app.config.general.csrfTokenName) }}
+{{ prop('csrfTokenValue', craft.app.request.csrfToken) }}
 ```
 
-This allows more flexibility for designating responses you may want to cache to reduce unnecessary repetitive queries.
+You may want to separate shared data logic or cache to reduce unnecessary repetitive queries:
 
 ```twig
 {# templates/_shared/current-user.twig #}
@@ -86,10 +89,10 @@ This allows more flexibility for designating responses you may want to cache to 
       fullName: currentUser.fullName,
       email: currentUser.email,
     } %}
-    {{ share({ currentUser: user }) }}
+    {{ prop('currentUser' user) }}
   {% endcache %}
 {% else %}
-  {{ share({ currentUser: null }) }}
+  {{ prop('currentUser', null) }}
 {% endif %}
 ```
 
