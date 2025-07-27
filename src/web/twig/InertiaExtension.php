@@ -58,7 +58,7 @@ class InertiaExtension extends AbstractExtension
 
             new TwigFunction('prop', [$this, 'prop'], ['needs_environment' => true, 'is_safe' => ['html']]),
 
-            new TwigFunction('inertiaShare', function ($props) {
+            new TwigFunction('share', function ($props) {
                 return Json::encode($props);
             }, ['is_safe' => ['html']]),
 
