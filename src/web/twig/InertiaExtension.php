@@ -50,9 +50,9 @@ class InertiaExtension extends AbstractExtension
                     'props' => $props,
                 ]);
             }, ['is_safe' => ['html']]),
-            // New component() function
-            new TwigFunction('component', function ($component) {
-                Craft::$app->params['__inertia_component'] = $component;
+            // New page() function (renamed from component)
+            new TwigFunction('page', function ($page) {
+                Craft::$app->params['__inertia_page'] = $page;
                 return '';
             }),
             // New prop() function outputs marker for controller parsing

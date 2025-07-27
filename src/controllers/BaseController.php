@@ -85,7 +85,7 @@ class BaseController extends Controller
                         $explicitProps = $legacyExplicitProps;
                     } else {
                         // New pattern: collect from Craft::$app->params
-                        $component = Craft::$app->params['__inertia_component'] ?? null;
+                        $component = Craft::$app->params['__inertia_page'] ?? null;
                         // We intentionally do NOT use $explicitProps = Craft::$app->params['__inertia_props'] ?? [];
                         // because per-prop caching requires extracting props from the rendered output, not from params.
 
