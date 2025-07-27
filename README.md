@@ -55,7 +55,7 @@ Every page in your javascript application is backed by a Twig template which ret
 {# Or use the prune filter #}
 {{ prop('posts', craft.entries.section('posts').limit(20).all()|prune(['title','body'])) }}
 
-{# Use the inertia variable to define the Page component to render and props to pass #}
+{# Use the page variable to define the Page component to render and props to pass #}
 {{ page('Posts/Index') }}
 ```
 
