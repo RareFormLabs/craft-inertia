@@ -2,6 +2,7 @@
 
 namespace rareform\inertia\web\twig;
 
+use Craft;
 use Twig\Error\RuntimeError;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
@@ -14,6 +15,7 @@ use rareform\Prune;
  */
 class InertiaExtension extends AbstractExtension
 {
+
     public function getFilters()
     {
         return [
@@ -24,14 +26,33 @@ class InertiaExtension extends AbstractExtension
         ];
     }
 
+    /**
+     * Outputs a JSON-like marker for controller parsing and stores the prop for controller collection.
+     */
+    public function prop(\Twig\Environment $env, $name, $value = null)
+    {
+        // Store prop for controller collection
+        $params = Craft::$app->params;
+        if (!isset($params['__inertia_props'])) {
+            $params['__inertia_props'] = [];
+        }
+        $params['__inertia_props'][$name] = $value;
+        Craft::$app->params = $params;
+
+        // Output a marker as an HTML comment for controller parsing
+        // Use json_encode for value, always
+        $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        return "<!--INERTIA_PROP:{\"$name\":$jsonValue}-->";
+    }
+
     public function getFunctions()
     {
         return [
             // Legacy inertia() function
             new TwigFunction('inertia', function ($component, $props = []) {
                 // Store in global context for controller to pick up
-                \Craft::$app->params['inertiaComponent'] = $component;
-                \Craft::$app->params['inertiaExplicitProps'] = $props;
+                Craft::$app->params['inertiaComponent'] = $component;
+                Craft::$app->params['inertiaExplicitProps'] = $props;
                 return Json::encode([
                     'component' => $component,
                     'props' => $props,
@@ -39,17 +60,12 @@ class InertiaExtension extends AbstractExtension
             }, ['is_safe' => ['html']]),
             // New component() function
             new TwigFunction('component', function ($component) {
-                \Craft::$app->params['__inertia_component'] = $component;
+                Craft::$app->params['__inertia_component'] = $component;
                 return '';
             }),
-            // New prop() function
-            new TwigFunction('prop', function ($name, $value = null) {
-                if (!isset(\Craft::$app->params['__inertia_props'])) {
-                    \Craft::$app->params['__inertia_props'] = [];
-                }
-                \Craft::$app->params['__inertia_props'][$name] = $value;
-                return null;
-            }),
+            // New prop() function outputs marker for controller parsing
+            new TwigFunction('prop', [$this, 'prop'], ['needs_environment' => true, 'is_safe' => ['html']]),
+
             new TwigFunction('inertiaShare', function ($props) {
                 return Json::encode($props);
             }, ['is_safe' => ['html']]),

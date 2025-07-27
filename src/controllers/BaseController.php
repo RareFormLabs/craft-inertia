@@ -98,7 +98,18 @@ class BaseController extends Controller
                     } else {
                         // New pattern: collect from Craft::$app->params
                         $component = Craft::$app->params['__inertia_component'] ?? null;
-                        $explicitProps = Craft::$app->params['__inertia_props'] ?? [];
+                        // $explicitProps = Craft::$app->params['__inertia_props'] ?? [];
+
+                        // Try to extract individual prop markers from the rendered output (HTML comment markers)
+                        $explicitProps = [];
+                        if (preg_match_all('/<!--INERTIA_PROP:(\{.*?\})-->/s', $stringResponse, $matches)) {
+                            foreach ($matches[1] as $json) {
+                                $propArr = json_decode($json, true);
+                                if (is_array($propArr)) {
+                                    $explicitProps = array_merge($explicitProps, $propArr);
+                                }
+                            }
+                        }
                     }
 
                     // Fallback: try to parse from output as before
