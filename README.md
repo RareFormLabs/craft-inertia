@@ -89,7 +89,7 @@ You may want to separate shared data logic or cache to reduce unnecessary repeti
       fullName: currentUser.fullName,
       email: currentUser.email,
     } %}
-    {{ prop('currentUser' user) }}
+    {{ prop('currentUser', user) }}
   {% endcache %}
 {% else %}
   {{ prop('currentUser', null) }}
