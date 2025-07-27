@@ -78,11 +78,11 @@ class BaseController extends Controller
 
                     // Legacy inertia() function support
                     $legacyPage = Craft::$app->has('inertiaPage') ? \Craft::$app->get('inertiaPage') : null;
-                    $legacyprops = Craft::$app->has('inertiaprops') ? Craft::$app->get('inertiaprops') : [];
+                    $legacyProps = Craft::$app->has('inertiaProps') ? Craft::$app->get('inertiaProps') : [];
 
                     if ($legacyPage) {
                         $page = $legacyPage;
-                        $props = $legacyprops;
+                        $props = $legacyProps;
                     } else {
                         // New pattern: collect from Craft::$app->params
                         $page = Craft::$app->params['__inertia_page'] ?? null;
