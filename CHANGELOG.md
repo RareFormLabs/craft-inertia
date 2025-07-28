@@ -1,5 +1,15 @@
 # Release Notes for Inertia
 
+## 1.0.0 - 2025-07-27
+
+- Deprecate the `inertia` twig function in favor of independent `prop` & `page` functions, to allow flexible individual prop caching.
+- Remove `inertiaShare` twig function, replaced with `prop`.
+- Update README to reflect new DX.
+
+## 1.0.0-beta.5 - 2025-04-19
+
+- Fix response error in axios hook
+
 ## 1.0.0-beta.4 - 2025-04-14
 
 - Adds Axios hook for CSRF handling & form submission DX improvements
