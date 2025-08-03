@@ -32,11 +32,10 @@ class InertiaExtension extends AbstractExtension
     public function prop($name, $value = null)
     {
         // Output a marker as an HTML comment for controller parsing
-        $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-        if ($jsonValue === false) {
-            // Handle encoding error: throw or fallback
-            $error = json_last_error_msg();
-            throw new \RuntimeException("Failed to encode Inertia prop '$name' as JSON: $error");
+        try {
+            $jsonValue = Json::encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException("Failed to encode Inertia prop '$name' as JSON: " . $e->getMessage(), 0, $e);
         }
         return "<!--INERTIA_PROP:{\"$name\":$jsonValue}-->";
     }
