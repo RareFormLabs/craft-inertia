@@ -1,6 +1,6 @@
 # Release Notes for Inertia
 
-# 1.0.1 - 2025-08-02
+## 1.0.1 - 2025-08-02
 
 - Handle potential recursion errors from JSON encoding
 
