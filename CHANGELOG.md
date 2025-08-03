@@ -1,5 +1,9 @@
 # Release Notes for Inertia
 
+# 1.0.1 - 2025-08-02
+
+- Handle potential recursion errors from JSON encoding
+
 ## 1.0.0 - 2025-07-27
 
 - Deprecate the `inertia` twig function in favor of independent `prop` & `page` functions, to allow flexible individual prop caching.
