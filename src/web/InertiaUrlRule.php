@@ -18,7 +18,7 @@ class InertiaUrlRule extends CraftUrlRule
       unset($config['inertia']);
 
       $config['defaults'] = array_merge(
-        isset($config['defaults']) && is_array($config['defaults']) ? $config['defaults'] : [],
+        $config['defaults'] ?? [],
         ['inertiaTemplate' => $config['template'] ?? null]
       );
 
