@@ -180,6 +180,13 @@ class Plugin extends BasePlugin
             UrlManager::EVENT_REGISTER_SITE_URL_RULES,
             function (RegisterUrlRulesEvent $event) {
                 if (!$this->settings->takeoverRouting) {
+
+                    foreach ($event->rules as &$rule) {
+                        if (is_array($rule) && !empty($rule['inertia'])) {
+                            $rule['class'] = 'rareform\inertia\web\InertiaUrlRule';
+                        }
+                    }
+
                     return;
                 }
                 $event->rules = array_merge($event->rules, [
@@ -206,10 +213,12 @@ class Plugin extends BasePlugin
             Element::EVENT_SET_ROUTE,
             function (SetElementRouteEvent $event) {
                 $element = $event->sender;
-                if (!$element) return;
-                
+                if (!$element)
+                    return;
+
                 $isCraftElement = $element instanceof Entry || $element instanceof Category;
-                if (!$isCraftElement) return;
+                if (!$isCraftElement)
+                    return;
 
                 $event->route = 'inertia/base/index';
 
