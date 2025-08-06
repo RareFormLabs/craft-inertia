@@ -38,14 +38,37 @@ class BaseController extends Controller
 
         $templateVariables = [];
         $matchesTwigTemplate = false;
+        $specifiedTemplate = null;
+        $inertiaConfiguredDirectory = Inertia::getInstance()->settings->inertiaDirectory ?? null;
+        $inertiaTemplatePath = $inertiaConfiguredDirectory ? $inertiaConfiguredDirectory . '/' . $uri : $uri;
 
+        // 1. If an element matches, use the element logic
         if ($element) {
             [$matchesTwigTemplate, $specifiedTemplate, $templateVariables] = $this->handleElementRequest($element, $uri);
         } else {
-            $inertiaConfiguredDirectory = Inertia::getInstance()->settings->inertiaDirectory ?? null;
-            $inertiaTemplatePath = $inertiaConfiguredDirectory ? $inertiaConfiguredDirectory . '/' . $uri : $uri;
-
-            $matchesTwigTemplate = Craft::$app->getView()->doesTemplateExist($inertiaTemplatePath);
+            // 2. Check for explicit template param (e.g., from routes.php) passed via 'template' (handled by InertiaUrlRule)
+            $explicitTemplate = Craft::$app->UrlManager->getRouteParams()['inertiaTemplate'] ?? null;
+            if ($explicitTemplate && Craft::$app->getView()->doesTemplateExist($explicitTemplate)) {
+                $matchesTwigTemplate = true;
+                $specifiedTemplate = $explicitTemplate;
+                // Merge all route params except inertiaTemplate itself
+                $templateVariables = array_merge($templateVariables, array_diff_key($request->getBodyParams() + $request->getQueryParams(), ['inertiaTemplate' => true]));
+            } else if (Craft::$app->getView()->doesTemplateExist($inertiaTemplatePath)) {
+                $matchesTwigTemplate = true;
+            } else {
+                // 3. Try to match a route from routes.php (for legacy/other cases)
+                $routeMatch = $urlManager->parseRequest($request);
+                if ($routeMatch && is_array($routeMatch) && isset($routeMatch[0])) {
+                    $routeTemplate = $routeMatch[0];
+                    $routeParams = isset($routeMatch[1]) && is_array($routeMatch[1]) ? $routeMatch[1] : [];
+                    $matchesTwigTemplate = Craft::$app->getView()->doesTemplateExist($routeTemplate);
+                    $specifiedTemplate = $routeTemplate;
+                    $templateVariables = array_merge($templateVariables, $routeParams);
+                } else {
+                    // 4. Fallback to URI-based template lookup
+                    $matchesTwigTemplate = Craft::$app->getView()->doesTemplateExist($inertiaTemplatePath);
+                }
+            }
         }
 
         if ($matchesTwigTemplate) {
@@ -65,7 +88,7 @@ class BaseController extends Controller
             try {
                 // Process any pulls in the template first
                 $processedTemplate = $this->processTemplatePulls($template);
-                
+
                 // Will store template variables that get set during rendering
                 $capturedVariables = [];
                 $page = null;
@@ -77,8 +100,8 @@ class BaseController extends Controller
                     $stringResponse = Craft::$app->getView()->renderString($processedTemplate, $templateVariables);
 
                     // Legacy inertia() function support
-                    $legacyPage = Craft::$app->has('inertiaPage') ? \Craft::$app->get('inertiaPage') : null;
-                    $legacyProps = Craft::$app->has('inertiaProps') ? Craft::$app->get('inertiaProps') : [];
+                    $legacyPage = Craft::$app->params['inertiaPage'] ?? null;
+                    $legacyProps = Craft::$app->params['inertiaProps'] ?? [];
 
                     if ($legacyPage) {
                         $page = $legacyPage;
@@ -139,8 +162,6 @@ class BaseController extends Controller
                 Craft::error('Error processing Inertia template: ' . $e->getMessage(), __METHOD__);
                 throw $e;
             }
-            
-            throw new NotFoundHttpException('No matching template found');
         }
     }
 
@@ -352,7 +373,7 @@ class BaseController extends Controller
         $specifiedTemplate = $siteSetting->template;
         $templateVariables = $this->extractUriParameters($uri, $uriFormat);
 
-        if  ($element instanceof Entry) {
+        if ($element instanceof Entry) {
             $templateVariables['entry'] = $element;
         } elseif ($element instanceof Category) {
             $templateVariables['category'] = $element;
@@ -430,40 +451,42 @@ class BaseController extends Controller
     private function processTemplatePulls(string $template): string
     {
         $view = Craft::$app->getView();
-        
+
         // Store original template mode and switch to site mode
         $originalMode = $view->getTemplateMode();
         $view->setTemplateMode($view::TEMPLATE_MODE_SITE);
-        
+
         try {
             // Find the actual template file
             $templatePath = $view->resolveTemplate($template);
             if (!$templatePath) {
                 throw new \Exception("Template not found: {$template}");
             }
-            
+
             // Read the template contents
             $templateContent = file_get_contents($templatePath);
 
-            // This pattern will match {% pull('path') %}
-            $pattern = '/\{%\s*pull\s*\(\s*([^\)]+)\s*\)\s*%\}/';
 
-            $processedContent = preg_replace_callback($pattern, function($matches) use ($view) {
-                $pullPath = trim($matches[1]);
+            // This pattern will match both {% pull('path') %} and {% pull 'path' %}
+            $pattern = '/\{%\s*pull\s*(?:\(\s*([^\)]+)\s*\)|([^%]+))%\}/';
+
+            $processedContent = preg_replace_callback($pattern, function ($matches) use ($view) {
+                // $matches[1] is for paren, $matches[2] is for no paren
+                $pullPath = isset($matches[1]) && $matches[1] !== '' ? trim($matches[1]) : trim($matches[2]);
 
                 $directPath = trim($pullPath, "'\"");
                 $referencedPath = $view->resolveTemplate($directPath);
-                
+
                 if (!$referencedPath) {
                     Craft::warning("Template not found: {$pullPath}", __METHOD__);
-                    return ''; // Or handle the error as needed
+                    return '';
                 }
-                
+
                 return file_get_contents($referencedPath);
             }, $templateContent);
-            
+
             return $processedContent;
-            
+
         } finally {
             // Restore original template mode
             $view->setTemplateMode($originalMode);
