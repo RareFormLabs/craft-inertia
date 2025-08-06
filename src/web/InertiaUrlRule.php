@@ -17,9 +17,10 @@ class InertiaUrlRule extends CraftUrlRule
       // Remove 'inertia' from config
       unset($config['inertia']);
 
-      $config['defaults'] = [
-        'inertiaTemplate' => $config['template'] ?? null,
-      ];
+      $config['defaults'] = array_merge(
+        isset($config['defaults']) && is_array($config['defaults']) ? $config['defaults'] : [],
+        ['inertiaTemplate' => $config['template'] ?? null]
+      );
 
       unset($config['template']);
       // Set the route to the Inertia controller
