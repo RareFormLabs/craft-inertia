@@ -181,7 +181,7 @@ class Plugin extends BasePlugin
             function (RegisterUrlRulesEvent $event) {
                 if (!$this->settings->takeoverRouting) {
 
-                    foreach ($event->rules as $pattern => &$rule) {
+                    foreach ($event->rules as &$rule) {
                         if (is_array($rule) && !empty($rule['inertia'])) {
                             $rule['class'] = 'rareform\inertia\web\InertiaUrlRule';
                         }
