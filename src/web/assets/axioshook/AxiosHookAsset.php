@@ -10,9 +10,9 @@ use craft\web\AssetBundle;
  */
 class AxiosHookAsset extends AssetBundle
 {
-    public $sourcePath = __DIR__ . '/dist';
+    public $sourcePath;
     public $depends = [];
-    public $js = ['index.js'];
+    public $js = [];
     public $css = [];
 
     /**
@@ -20,16 +20,17 @@ class AxiosHookAsset extends AssetBundle
      */
     public function init()
     {
-        // define the path that your publishable resources live
-        $this->sourcePath =  __DIR__ . '/dist';
-
-        // define the dependencies
+        // Use Craft's devMode config to determine environment
+        $isDev = Craft::$app->config->general->devMode;
+        if ($isDev) {
+            $this->sourcePath = __DIR__ . '/dist-dev';
+            $this->js = ['index-dev.js'];
+        } else {
+            $this->sourcePath = __DIR__ . '/dist';
+            $this->js = ['index.js'];
+        }
         $this->depends = [];
-
-        $this->js = ['index.js'];
-
         $this->css = [];
-
         parent::init();
     }
 }
