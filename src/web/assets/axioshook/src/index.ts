@@ -111,25 +111,12 @@ const configureAxios = async () => {
       if (config.data instanceof FormData) {
         config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
         config.data.append("action", actionPath);
+        // NOTE: FormData cannot represent empty arrays. If you need to send empty arrays,
+        // add a placeholder value (e.g., an empty string or special marker) when building the FormData.
+        // Example:
+        // if (myArray.length === 0) formData.append('myArray', '');
       } else {
-        config.data = {
-          [csrf.csrfTokenName]: csrf.csrfTokenValue,
-          action: actionPath,
-          ...config.data,
-        };
-      }
-
-      const contentType =
-        config.headers["Content-Type"] ||
-        config.headers["content-type"] ||
-        config.headers["CONTENT-TYPE"];
-
-      if (
-        typeof contentType === "string" &&
-        contentType.toLowerCase().includes("multipart/form-data")
-      ) {
-        // An empty array can't be represented in FormData
-        // Replace empty array values with empty strings
+        // For plain objects, replace empty arrays with empty strings before sending
         const replaceEmptyArrays = (obj: any): any => {
           if (Array.isArray(obj)) {
             return obj.map((item) => replaceEmptyArrays(item));
@@ -145,7 +132,24 @@ const configureAxios = async () => {
           }
           return obj;
         };
-        config.data = replaceEmptyArrays(config.data);
+
+        const contentType =
+          config.headers["Content-Type"] ||
+          config.headers["content-type"] ||
+          config.headers["CONTENT-TYPE"];
+
+        let data = {
+          [csrf.csrfTokenName]: csrf.csrfTokenValue,
+          action: actionPath,
+          ...config.data,
+        };
+        if (
+          typeof contentType === "string" &&
+          contentType.toLowerCase().includes("multipart/form-data")
+        ) {
+          data = replaceEmptyArrays(data);
+        }
+        config.data = data;
       }
     }
     return config;
