@@ -180,21 +180,28 @@ class Plugin extends BasePlugin
             UrlManager::EVENT_REGISTER_SITE_URL_RULES,
             function (RegisterUrlRulesEvent $event) {
                 if (!$this->settings->takeoverRouting) {
-
                     foreach ($event->rules as &$rule) {
                         if (is_array($rule) && !empty($rule['inertia'])) {
                             $rule['class'] = 'rareform\inertia\web\InertiaUrlRule';
                         }
                     }
-
-                    return;
                 }
-                $event->rules = array_merge($event->rules, [
-                    '' => 'inertia/base/index',
-                    '<catchall:.+>' => 'inertia/base/index',
-                ]);
             }
         );
+
+        // Register Inertia URL rules absolutely last
+        Event::on(Application::class, Application::EVENT_INIT, function() {
+            Event::on(
+                UrlManager::class,
+                UrlManager::EVENT_REGISTER_SITE_URL_RULES,
+                function(RegisterUrlRulesEvent $event) {
+                    $event->rules = array_merge($event->rules, [
+                        '' => 'inertia/base/index',
+                        '<catchall:.+>' => 'inertia/base/index',
+                    ]);
+                }
+            );
+        });
 
         // Enable use of default template on the frontend
         Event::on(
