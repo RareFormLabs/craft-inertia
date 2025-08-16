@@ -176,6 +176,7 @@ const checkForAxios = async () => {
     if (window.axios) {
       clearInterval(intervalCheck);
       await configureAxios();
+      console.log("Inertia (Craft): Axios configured successfully.");
       return;
     }
 
