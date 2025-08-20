@@ -37,6 +37,11 @@ class BaseController extends Controller
         $element = $urlManager->getMatchedElement() ?: Craft::$app->getElements()->getElementByUri($uri);
 
         $templateVariables = [];
+
+        $requestParams = array_merge(
+            Craft::$app->getUrlManager()->getRouteParams() ?? []
+        );
+        $templateVariables = array_merge($requestParams, $templateVariables);
         $matchesTwigTemplate = false;
         $specifiedTemplate = null;
         $inertiaConfiguredDirectory = Inertia::getInstance()->settings->inertiaDirectory ?? null;
