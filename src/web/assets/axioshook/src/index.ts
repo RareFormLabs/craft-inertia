@@ -140,59 +140,63 @@ const setCsrfOnMeta = (csrfTokenName: string, csrfTokenValue: string): void => {
 };
 
 const configureAxios = async () => {
-  window.axios.defaults.headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
-  };
-
   (window.axios as AxiosInstance).interceptors.request.use(async (config) => {
-    if (config.method === "post" || config.method === "put") {
-      let csrfMeta = getTokenFromMeta();
-      if (!csrfMeta) {
-        // Wait for the session info to be resolved before configuring axios
-        sessionInfo = await getSessionInfo();
-        if (!sessionInfo.isGuest) {
-          setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
-          csrfMeta = getTokenFromMeta();
-        }
-      }
+    if (config.method !== "post" && config.method !== "put") {
+      return config;
+    }
 
-      const csrf = csrfMeta || sessionInfo;
-
-      if (!csrf) {
-        throw new Error(
-          "Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present."
-        );
-      }
-
-      const actionPath = getActionPath(config.url ?? "");
-
-      if (config.data instanceof FormData) {
-        if (!config.data.has("action")) {
-          config.data.append("action", actionPath);
-        }
-        config.url = "";
-        config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
-
-        // NOTE: FormData cannot represent empty arrays. If you need to send empty arrays,
-        // add a placeholder value (e.g., an empty string or special marker) when building the FormData.
-        // eg, if (myArray.length === 0) formData.append('myArray', '');
-      } else {
-        let data = {
-          [csrf.csrfTokenName]: csrf.csrfTokenValue,
-          action: actionPath,
-          ...config.data,
-        };
-
-        const contentType = getContentType(config.headers);
-        if (
-          typeof contentType === "string" &&
-          contentType.toLowerCase().includes("multipart/form-data")
-        ) {
-          data = replaceEmptyArrays(data);
-        }
-        config.data = data;
+    let csrfMeta = getTokenFromMeta();
+    if (!csrfMeta) {
+      // Wait for the session info to be resolved before configuring axios
+      sessionInfo = await getSessionInfo();
+      if (!sessionInfo.isGuest) {
+        setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
+        csrfMeta = getTokenFromMeta();
       }
     }
+
+    const csrf = csrfMeta || sessionInfo;
+
+    if (!csrf) {
+      throw new Error(
+        "Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present."
+      );
+    }
+
+    const actionPath = getActionPath(config.url ?? "");
+
+    if (getContentType(config.headers) == undefined) {
+      config.headers.set("Content-Type", "application/x-www-form-urlencoded");
+    }
+
+    if (config.data instanceof FormData) {
+      if (!config.data.has("action")) {
+        config.data.append("action", actionPath);
+      }
+      config.url = "";
+      config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
+
+      /** NOTE: FormData cannot represent empty arrays. If you need to send empty arrays as values,
+       * add a placeholder value (e.g., an empty string or special marker) when building the FormData.
+       * eg, if (myArray.length === 0) formData.append('myArray', '');
+       */
+    } else {
+      let data = {
+        [csrf.csrfTokenName]: csrf.csrfTokenValue,
+        action: actionPath,
+        ...config.data,
+      };
+
+      const contentType = getContentType(config.headers);
+      if (
+        typeof contentType === "string" &&
+        contentType.toLowerCase().includes("multipart/form-data")
+      ) {
+        data = replaceEmptyArrays(data);
+      }
+      config.data = data;
+    }
+
     return config;
   });
 
