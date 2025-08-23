@@ -101,7 +101,7 @@ const configureAxios = async () => {
       const csrf = csrfMeta || sessionInfo;
 
       if (!csrf) {
-        throw new Error("CSRF token not found");
+        throw new Error("Inertia (Craft): CSRF token not found");
       }
 
       const actionPath = getActionPath(config.url);
