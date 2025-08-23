@@ -149,7 +149,6 @@ const configureAxios = async () => {
   };
 
   (window.axios as AxiosInstance).interceptors.request.use(async (config) => {
-    // debugger;
     if (config.method === "post" || config.method === "put") {
       let csrfMeta = getTokenFromMeta();
       if (!csrfMeta) {
@@ -204,7 +203,6 @@ const configureAxios = async () => {
   // Add a response interceptor
   (window.axios as AxiosInstance).interceptors.response.use(
     async (response) => {
-      // debugger;
       // Support both FormData and plain object/stringified data
       let action = null;
       if (response.config.data instanceof FormData) {
