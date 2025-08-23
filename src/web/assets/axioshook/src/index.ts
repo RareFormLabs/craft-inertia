@@ -164,7 +164,9 @@ const configureAxios = async () => {
       const csrf = csrfMeta || sessionInfo;
 
       if (!csrf) {
-        throw new Error("Inertia (Craft): CSRF token not found");
+        throw new Error(
+          "Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present."
+        );
       }
 
       const actionPath = getActionPath(config.url ?? "");
@@ -223,7 +225,7 @@ const configureAxios = async () => {
           action = params.get("action");
         }
       }
-      if (action == "users/login") {
+      if (action === "users/login") {
         await getSessionInfo().then((sessionInfo) => {
           setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
         });
