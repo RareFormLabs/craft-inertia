@@ -1,4 +1,4 @@
-import type { AxiosInstance } from "axios";
+import type { AxiosInstance, AxiosHeaders } from "axios";
 
 declare global {
   interface Window {
@@ -79,6 +79,21 @@ const replaceEmptyArrays = (obj: any): any => {
   return obj;
 };
 
+const getContentType = (
+  headers: AxiosHeaders | Record<string, any>
+): string | undefined => {
+  // AxiosHeaders may have a .get() method, otherwise treat as plain object
+  if (typeof (headers as any).get === "function") {
+    return (headers as any).get("content-type");
+  }
+  for (const key in headers) {
+    if (key.toLowerCase() === "content-type") {
+      return headers[key];
+    }
+  }
+  return undefined;
+};
+
 const setCsrfOnMeta = (csrfTokenName: string, csrfTokenValue: string): void => {
   // Check if a CSRF meta element already exists
   let csrfMetaEl = document.head.querySelector("meta[csrf]");
@@ -131,16 +146,13 @@ const configureAxios = async () => {
         // add a placeholder value (e.g., an empty string or special marker) when building the FormData.
         // eg, if (myArray.length === 0) formData.append('myArray', '');
       } else {
-        const contentType =
-          config.headers["Content-Type"] ||
-          config.headers["content-type"] ||
-          config.headers["CONTENT-TYPE"];
-
         let data = {
           [csrf.csrfTokenName]: csrf.csrfTokenValue,
           action: actionPath,
           ...config.data,
         };
+
+        const contentType = getContentType(config.headers);
         if (
           typeof contentType === "string" &&
           contentType.toLowerCase().includes("multipart/form-data")
