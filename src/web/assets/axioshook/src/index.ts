@@ -79,16 +79,31 @@ const getTokenFromMeta = (): csrfMeta | null => {
   };
 };
 
-const replaceEmptyArrays = (obj: any): any => {
+/**
+ * Replaces empty arrays in an object with an empty string, up to a max depth.
+ * @param obj The object to process
+ * @param maxDepth Maximum depth to traverse (default: 10)
+ * @param currentDepth Current depth (for internal use)
+ */
+export const replaceEmptyArrays = (
+  obj: any,
+  maxDepth = 10,
+  currentDepth = 0
+): any => {
+  if (currentDepth > maxDepth) {
+    return obj;
+  }
   if (Array.isArray(obj)) {
-    return obj.map((item) => replaceEmptyArrays(item));
+    return obj.map((item) =>
+      replaceEmptyArrays(item, maxDepth, currentDepth + 1)
+    );
   } else if (typeof obj === "object" && obj !== null) {
     return Object.fromEntries(
       Object.entries(obj).map(([key, value]) => [
         key,
         Array.isArray(value) && value.length === 0
           ? ""
-          : replaceEmptyArrays(value),
+          : replaceEmptyArrays(value, maxDepth, currentDepth + 1),
       ])
     );
   }
@@ -134,6 +149,7 @@ const configureAxios = async () => {
   };
 
   (window.axios as AxiosInstance).interceptors.request.use(async (config) => {
+    // debugger;
     if (config.method === "post" || config.method === "put") {
       let csrfMeta = getTokenFromMeta();
       if (!csrfMeta) {
@@ -151,13 +167,15 @@ const configureAxios = async () => {
         throw new Error("Inertia (Craft): CSRF token not found");
       }
 
-      const actionPath = getActionPath(config.url);
-
-      config.url = "";
+      const actionPath = getActionPath(config.url ?? "");
 
       if (config.data instanceof FormData) {
+        if (!config.data.has("action")) {
+          config.data.append("action", actionPath);
+        }
+        config.url = "";
         config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
-        config.data.append("action", actionPath);
+
         // NOTE: FormData cannot represent empty arrays. If you need to send empty arrays,
         // add a placeholder value (e.g., an empty string or special marker) when building the FormData.
         // eg, if (myArray.length === 0) formData.append('myArray', '');
@@ -184,7 +202,28 @@ const configureAxios = async () => {
   // Add a response interceptor
   (window.axios as AxiosInstance).interceptors.response.use(
     async (response) => {
-      if (response.config.data?.get("action") == "users/login") {
+      // debugger;
+      // Support both FormData and plain object/stringified data
+      let action = null;
+      if (response.config.data instanceof FormData) {
+        action = response.config.data.get("action");
+      } else if (
+        typeof response.config.data === "object" &&
+        response.config.data !== null
+      ) {
+        action = response.config.data.action;
+      } else if (typeof response.config.data === "string") {
+        // Try to parse as JSON or URL-encoded
+        try {
+          const parsed = JSON.parse(response.config.data);
+          action = parsed.action;
+        } catch {
+          // Try URLSearchParams
+          const params = new URLSearchParams(response.config.data);
+          action = params.get("action");
+        }
+      }
+      if (action == "users/login") {
         await getSessionInfo().then((sessionInfo) => {
           setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
         });
