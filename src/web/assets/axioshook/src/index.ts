@@ -1,4 +1,4 @@
-import type { AxiosInstance } from "axios";
+import type { AxiosInstance, AxiosHeaders } from "axios";
 
 declare global {
   interface Window {
@@ -33,6 +33,22 @@ const getSessionInfo = async function (): Promise<SessionInfo> {
 // Don't store the promise, store the session info once it's resolved
 let sessionInfo: SessionInfo | null = null;
 
+/**
+ * Craft CMS submission requirements:
+ *
+ * - If specifying application/json as content-type header:
+ *   - Using Inertia's Form component, include the "action" parameter
+ *     - <Form method="post" action="/actions/...">
+ *   - Or POST directly to a /actions/ endpoint.
+ *     - (useForm) form.post("/actions/...")
+ *
+ * - Default: If using application/x-www-form-urlencoded content-type header:
+ *   - Include "action" parameter in the form data (no /actions/ prefix)
+ *     - <input type="hidden" name="action" value="entries/save-entry">
+ *   - Or POST to the current URL ("")
+ *     - (useForm) form.post("")
+ */
+
 const getActionPath = (url: string) => {
   const postPathObject: URL = new URL(url);
   const postPathPathname: string = postPathObject.pathname;
@@ -63,6 +79,48 @@ const getTokenFromMeta = (): csrfMeta | null => {
   };
 };
 
+/**
+ * Replaces empty arrays in an object with an empty string, up to a max depth.
+ * @param obj The object to process
+ * @param maxDepth Maximum depth to traverse (default: 10)
+ * @param currentDepth Current depth (for internal use)
+ */
+const replaceEmptyArrays = (obj: any, maxDepth = 10, currentDepth = 0): any => {
+  if (currentDepth > maxDepth) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) =>
+      replaceEmptyArrays(item, maxDepth, currentDepth + 1)
+    );
+  } else if (typeof obj === "object" && obj !== null) {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        key,
+        Array.isArray(value) && value.length === 0
+          ? ""
+          : replaceEmptyArrays(value, maxDepth, currentDepth + 1),
+      ])
+    );
+  }
+  return obj;
+};
+
+const getContentType = (
+  headers: AxiosHeaders | Record<string, any>
+): string | undefined => {
+  // AxiosHeaders may have a .get() method, otherwise treat as plain object
+  if (typeof (headers as any).get === "function") {
+    return (headers as any).get("content-type");
+  }
+  for (const key in headers) {
+    if (key.toLowerCase() === "content-type") {
+      return headers[key];
+    }
+  }
+  return undefined;
+};
+
 const setCsrfOnMeta = (csrfTokenName: string, csrfTokenValue: string): void => {
   // Check if a CSRF meta element already exists
   let csrfMetaEl = document.head.querySelector("meta[csrf]");
@@ -82,83 +140,90 @@ const setCsrfOnMeta = (csrfTokenName: string, csrfTokenValue: string): void => {
 };
 
 const configureAxios = async () => {
-  window.axios.defaults.headers = {
-    "Content-Type": "multipart/form-data",
-  };
-
   (window.axios as AxiosInstance).interceptors.request.use(async (config) => {
-    if (config.method === "post" || config.method === "put") {
-      let csrfMeta = getTokenFromMeta();
-      if (!csrfMeta) {
-        // Wait for the session info to be resolved before configuring axios
-        sessionInfo = await getSessionInfo();
-        if (!sessionInfo.isGuest) {
-          setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
-          csrfMeta = getTokenFromMeta();
-        }
-      }
+    if (config.method !== "post" && config.method !== "put") {
+      return config;
+    }
 
-      const csrf = csrfMeta || sessionInfo;
-
-      if (!csrf) {
-        throw new Error("CSRF token not found");
-      }
-
-      const actionPath = getActionPath(config.url);
-
-      config.url = "";
-
-      if (config.data instanceof FormData) {
-        config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
-        config.data.append("action", actionPath);
-        // NOTE: FormData cannot represent empty arrays. If you need to send empty arrays,
-        // add a placeholder value (e.g., an empty string or special marker) when building the FormData.
-        // Example:
-        // if (myArray.length === 0) formData.append('myArray', '');
-      } else {
-        // For plain objects, replace empty arrays with empty strings before sending
-        const replaceEmptyArrays = (obj: any): any => {
-          if (Array.isArray(obj)) {
-            return obj.map((item) => replaceEmptyArrays(item));
-          } else if (typeof obj === "object" && obj !== null) {
-            return Object.fromEntries(
-              Object.entries(obj).map(([key, value]) => [
-                key,
-                Array.isArray(value) && value.length === 0
-                  ? ""
-                  : replaceEmptyArrays(value),
-              ])
-            );
-          }
-          return obj;
-        };
-
-        const contentType =
-          config.headers["Content-Type"] ||
-          config.headers["content-type"] ||
-          config.headers["CONTENT-TYPE"];
-
-        let data = {
-          [csrf.csrfTokenName]: csrf.csrfTokenValue,
-          action: actionPath,
-          ...config.data,
-        };
-        if (
-          typeof contentType === "string" &&
-          contentType.toLowerCase().includes("multipart/form-data")
-        ) {
-          data = replaceEmptyArrays(data);
-        }
-        config.data = data;
+    let csrfMeta = getTokenFromMeta();
+    if (!csrfMeta) {
+      // Wait for the session info to be resolved before configuring axios
+      sessionInfo = await getSessionInfo();
+      if (!sessionInfo.isGuest) {
+        setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
+        csrfMeta = getTokenFromMeta();
       }
     }
+
+    const csrf = csrfMeta || sessionInfo;
+
+    if (!csrf) {
+      throw new Error(
+        "Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present."
+      );
+    }
+
+    const actionPath = getActionPath(config.url ?? "");
+
+    if (getContentType(config.headers) == undefined) {
+      config.headers.set("Content-Type", "application/x-www-form-urlencoded");
+    }
+
+    if (config.data instanceof FormData) {
+      if (!config.data.has("action")) {
+        config.data.append("action", actionPath);
+        config.url = "";
+      }
+      config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
+
+      /** NOTE: FormData cannot represent empty arrays. If you need to send empty arrays as values,
+       * add a placeholder value (e.g., an empty string or special marker) when building the FormData.
+       * eg, if (myArray.length === 0) formData.append('myArray', '');
+       */
+    } else {
+      let data = {
+        [csrf.csrfTokenName]: csrf.csrfTokenValue,
+        action: actionPath,
+        ...config.data,
+      };
+
+      const contentType = getContentType(config.headers ?? {});
+      if (
+        typeof contentType === "string" &&
+        contentType.toLowerCase().includes("multipart/form-data")
+      ) {
+        data = replaceEmptyArrays(data);
+      }
+      config.data = data;
+    }
+
     return config;
   });
 
   // Add a response interceptor
   (window.axios as AxiosInstance).interceptors.response.use(
     async (response) => {
-      if (response.config.data?.get("action") == "users/login") {
+      // Support both FormData and plain object/stringified data
+      let action = null;
+      if (response.config.data instanceof FormData) {
+        action = response.config.data.get("action");
+      } else if (
+        typeof response.config.data === "object" &&
+        response.config.data !== null
+      ) {
+        action = response.config.data.action;
+      } else if (typeof response.config.data === "string") {
+        // Try to parse as JSON or URL-encoded
+        try {
+          const parsed = JSON.parse(response.config.data);
+          action = parsed.action;
+        } catch {
+          // Try URLSearchParams
+          const params = new URLSearchParams(response.config.data);
+          action = params.get("action");
+        }
+      }
+      if (action === "users/login") {
         await getSessionInfo().then((sessionInfo) => {
           setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
         });

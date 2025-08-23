@@ -31,6 +31,35 @@
       csrfTokenValue: tokenValue ?? ""
     };
   };
+  const replaceEmptyArrays = (obj, maxDepth = 10, currentDepth = 0) => {
+    if (currentDepth > maxDepth) {
+      return obj;
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(
+        (item) => replaceEmptyArrays(item, maxDepth, currentDepth + 1)
+      );
+    } else if (typeof obj === "object" && obj !== null) {
+      return Object.fromEntries(
+        Object.entries(obj).map(([key, value]) => [
+          key,
+          Array.isArray(value) && value.length === 0 ? "" : replaceEmptyArrays(value, maxDepth, currentDepth + 1)
+        ])
+      );
+    }
+    return obj;
+  };
+  const getContentType = (headers) => {
+    if (typeof headers.get === "function") {
+      return headers.get("content-type");
+    }
+    for (const key in headers) {
+      if (key.toLowerCase() === "content-type") {
+        return headers[key];
+      }
+    }
+    return void 0;
+  };
   const setCsrfOnMeta = (csrfTokenName, csrfTokenValue) => {
     let csrfMetaEl = document.head.querySelector("meta[csrf]");
     if (csrfMetaEl) {
@@ -45,60 +74,65 @@
     }
   };
   const configureAxios = async () => {
-    window.axios.defaults.headers = {
-      "Content-Type": "multipart/form-data"
-    };
     window.axios.interceptors.request.use(async (config) => {
-      if (config.method === "post" || config.method === "put") {
-        let csrfMeta = getTokenFromMeta();
-        if (!csrfMeta) {
-          sessionInfo = await getSessionInfo();
-          if (!sessionInfo.isGuest) {
-            setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
-            csrfMeta = getTokenFromMeta();
-          }
+      if (config.method !== "post" && config.method !== "put") {
+        return config;
+      }
+      let csrfMeta = getTokenFromMeta();
+      if (!csrfMeta) {
+        sessionInfo = await getSessionInfo();
+        if (!sessionInfo.isGuest) {
+          setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
+          csrfMeta = getTokenFromMeta();
         }
-        const csrf = csrfMeta || sessionInfo;
-        if (!csrf) {
-          throw new Error("CSRF token not found");
-        }
-        const actionPath = getActionPath(config.url);
-        config.url = "";
-        if (config.data instanceof FormData) {
-          config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
+      }
+      const csrf = csrfMeta || sessionInfo;
+      if (!csrf) {
+        throw new Error(
+          "Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present."
+        );
+      }
+      const actionPath = getActionPath(config.url ?? "");
+      if (getContentType(config.headers) == void 0) {
+        config.headers.set("Content-Type", "application/x-www-form-urlencoded");
+      }
+      if (config.data instanceof FormData) {
+        if (!config.data.has("action")) {
           config.data.append("action", actionPath);
-        } else {
-          const replaceEmptyArrays = (obj) => {
-            if (Array.isArray(obj)) {
-              return obj.map((item) => replaceEmptyArrays(item));
-            } else if (typeof obj === "object" && obj !== null) {
-              return Object.fromEntries(
-                Object.entries(obj).map(([key, value]) => [
-                  key,
-                  Array.isArray(value) && value.length === 0 ? "" : replaceEmptyArrays(value)
-                ])
-              );
-            }
-            return obj;
-          };
-          const contentType = config.headers["Content-Type"] || config.headers["content-type"] || config.headers["CONTENT-TYPE"];
-          let data = {
-            [csrf.csrfTokenName]: csrf.csrfTokenValue,
-            action: actionPath,
-            ...config.data
-          };
-          if (typeof contentType === "string" && contentType.toLowerCase().includes("multipart/form-data")) {
-            data = replaceEmptyArrays(data);
-          }
-          config.data = data;
+          config.url = "";
         }
+        config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
+      } else {
+        let data = {
+          [csrf.csrfTokenName]: csrf.csrfTokenValue,
+          action: actionPath,
+          ...config.data
+        };
+        const contentType = getContentType(config.headers ?? {});
+        if (typeof contentType === "string" && contentType.toLowerCase().includes("multipart/form-data")) {
+          data = replaceEmptyArrays(data);
+        }
+        config.data = data;
       }
       return config;
     });
     window.axios.interceptors.response.use(
       async (response) => {
-        var _a;
-        if (((_a = response.config.data) == null ? void 0 : _a.get("action")) == "users/login") {
+        let action = null;
+        if (response.config.data instanceof FormData) {
+          action = response.config.data.get("action");
+        } else if (typeof response.config.data === "object" && response.config.data !== null) {
+          action = response.config.data.action;
+        } else if (typeof response.config.data === "string") {
+          try {
+            const parsed = JSON.parse(response.config.data);
+            action = parsed.action;
+          } catch {
+            const params = new URLSearchParams(response.config.data);
+            action = params.get("action");
+          }
+        }
+        if (action === "users/login") {
           await getSessionInfo().then((sessionInfo2) => {
             setCsrfOnMeta(sessionInfo2.csrfTokenName, sessionInfo2.csrfTokenValue);
           });
