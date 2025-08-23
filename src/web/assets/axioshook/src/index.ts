@@ -172,8 +172,8 @@ const configureAxios = async () => {
     if (config.data instanceof FormData) {
       if (!config.data.has("action")) {
         config.data.append("action", actionPath);
+        config.url = "";
       }
-      config.url = "";
       config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
 
       /** NOTE: FormData cannot represent empty arrays. If you need to send empty arrays as values,
@@ -187,7 +187,7 @@ const configureAxios = async () => {
         ...config.data,
       };
 
-      const contentType = getContentType(config.headers);
+      const contentType = getContentType(config.headers ?? {});
       if (
         typeof contentType === "string" &&
         contentType.toLowerCase().includes("multipart/form-data")
