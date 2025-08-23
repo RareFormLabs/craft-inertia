@@ -63,6 +63,22 @@ const getTokenFromMeta = (): csrfMeta | null => {
   };
 };
 
+const replaceEmptyArrays = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => replaceEmptyArrays(item));
+  } else if (typeof obj === "object" && obj !== null) {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        key,
+        Array.isArray(value) && value.length === 0
+          ? ""
+          : replaceEmptyArrays(value),
+      ])
+    );
+  }
+  return obj;
+};
+
 const setCsrfOnMeta = (csrfTokenName: string, csrfTokenValue: string): void => {
   // Check if a CSRF meta element already exists
   let csrfMetaEl = document.head.querySelector("meta[csrf]");
@@ -113,26 +129,8 @@ const configureAxios = async () => {
         config.data.append("action", actionPath);
         // NOTE: FormData cannot represent empty arrays. If you need to send empty arrays,
         // add a placeholder value (e.g., an empty string or special marker) when building the FormData.
-        // Example:
-        // if (myArray.length === 0) formData.append('myArray', '');
+        // eg, if (myArray.length === 0) formData.append('myArray', '');
       } else {
-        // For plain objects, replace empty arrays with empty strings before sending
-        const replaceEmptyArrays = (obj: any): any => {
-          if (Array.isArray(obj)) {
-            return obj.map((item) => replaceEmptyArrays(item));
-          } else if (typeof obj === "object" && obj !== null) {
-            return Object.fromEntries(
-              Object.entries(obj).map(([key, value]) => [
-                key,
-                Array.isArray(value) && value.length === 0
-                  ? ""
-                  : replaceEmptyArrays(value),
-              ])
-            );
-          }
-          return obj;
-        };
-
         const contentType =
           config.headers["Content-Type"] ||
           config.headers["content-type"] ||
