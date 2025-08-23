@@ -33,6 +33,22 @@ const getSessionInfo = async function (): Promise<SessionInfo> {
 // Don't store the promise, store the session info once it's resolved
 let sessionInfo: SessionInfo | null = null;
 
+/**
+ * Craft CMS submission requirements:
+ *
+ * - If specifying application/json as content-type header:
+ *   - Using Inertia's Form component, include the "action" parameter
+ *     - <Form method="post" action="/actions/...">
+ *   - Or POST directly to a /actions/ endpoint.
+ *     - (useForm) form.post("/actions/...")
+ *
+ * - Default: If using application/x-www-form-urlencoded content-type header:
+ *   - Include "action" parameter in the form data (no /actions/ prefix)
+ *     - <input type="hidden" name="action" value="entries/save-entry">
+ *   - Or POST to the current URL ("")
+ *     - (useForm) form.post("")
+ */
+
 const getActionPath = (url: string) => {
   const postPathObject: URL = new URL(url);
   const postPathPathname: string = postPathObject.pathname;
