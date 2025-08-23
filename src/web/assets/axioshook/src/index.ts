@@ -85,11 +85,7 @@ const getTokenFromMeta = (): csrfMeta | null => {
  * @param maxDepth Maximum depth to traverse (default: 10)
  * @param currentDepth Current depth (for internal use)
  */
-export const replaceEmptyArrays = (
-  obj: any,
-  maxDepth = 10,
-  currentDepth = 0
-): any => {
+const replaceEmptyArrays = (obj: any, maxDepth = 10, currentDepth = 0): any => {
   if (currentDepth > maxDepth) {
     return obj;
   }
