@@ -83,7 +83,7 @@ const setCsrfOnMeta = (csrfTokenName: string, csrfTokenValue: string): void => {
 
 const configureAxios = async () => {
   window.axios.defaults.headers = {
-    "Content-Type": "multipart/form-data",
+    "Content-Type": "application/x-www-form-urlencoded",
   };
 
   (window.axios as AxiosInstance).interceptors.request.use(async (config) => {
