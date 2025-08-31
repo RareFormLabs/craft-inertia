@@ -190,11 +190,11 @@ class Plugin extends BasePlugin
         );
 
         // Register Inertia URL rules absolutely last
-        Event::on(Application::class, Application::EVENT_INIT, function() {
+        Event::on(Application::class, Application::EVENT_INIT, function () {
             Event::on(
                 UrlManager::class,
                 UrlManager::EVENT_REGISTER_SITE_URL_RULES,
-                function(RegisterUrlRulesEvent $event) {
+                function (RegisterUrlRulesEvent $event) {
                     $event->rules = array_merge($event->rules, [
                         '' => 'inertia/base/index',
                         '<catchall:.+>' => 'inertia/base/index',
@@ -253,7 +253,7 @@ class Plugin extends BasePlugin
             Element::EVENT_AFTER_SAVE,
             function (ModelEvent $event) {
                 $element = $event->sender;
-                if (!Craft::$app->request->isConsoleRequest) {
+                if (!Craft::$app->request->isConsoleRequest && !Craft::$app->request->isCpRequest) {
                     Craft::$app->session->set('recentElementSave', $element->id);
                 }
             }
