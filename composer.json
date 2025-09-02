@@ -6,7 +6,7 @@
   "require": {
     "php": "^8.2",
     "craftcms/cms": "^5.0.0",
-    "rareform/craft-prune": "^0.1.0"
+    "rareform/craft-prune": "^0.4.1"
   },
   "require-dev": {
     "craftcms/generator": "^2.1"
