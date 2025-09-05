@@ -4,13 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run build --watch",
-    "build:min": "vite build --config vite.config.min.ts",
+    "dev": "sane 'npm run build' src",
+    "build": "run-s build:dev build:min --print-label",
     "build:dev": "vite build --config vite.config.dev.ts",
-    "build": "npm run build:min && npm run build:dev"
+    "build:min": "vite build --config vite.config.min.ts"
   },
   "devDependencies": {
     "axios": "^1.8.4",
+    "npm-run-all2": "^8.0.4",
+    "sane": "^5.0.1",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }
