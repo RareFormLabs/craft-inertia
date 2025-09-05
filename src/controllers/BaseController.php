@@ -38,9 +38,15 @@ class BaseController extends Controller
 
         $templateVariables = [];
 
-        $requestParams = array_merge(
-            Craft::$app->getUrlManager()->getRouteParams() ?? []
-        );
+        $requestParams = Craft::$app->getUrlManager()->getRouteParams();
+
+        // If the $requestParams contains a 'variables' associative array, move its contents to the top level and remove 'variables'.
+        // Top-level keys take precedence over 'variables' keys; numeric keys are preserved.
+        if (isset($requestParams['variables']) && is_array($requestParams['variables'])) {
+            $requestParams = $requestParams + $requestParams['variables'];
+            unset($requestParams['variables']);
+        }
+
         $templateVariables = array_merge($requestParams, $templateVariables);
         $matchesTwigTemplate = false;
         $specifiedTemplate = null;
