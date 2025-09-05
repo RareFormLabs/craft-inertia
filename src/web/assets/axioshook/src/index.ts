@@ -223,7 +223,22 @@ const configureAxios = async () => {
           action = params.get("action");
         }
       }
-      if (action === "users/login") {
+
+      let shouldRefreshCsrf = false;
+      const requiresFreshCsrf = ["users/login", "users/set-password"];
+
+      if (action && requiresFreshCsrf.includes(action)) {
+        shouldRefreshCsrf = true;
+      } else if (action && action == "users/save-user") {
+        if (
+          !response.config.data.get("userId") &&
+          !response.config.data.userId
+        ) {
+          shouldRefreshCsrf = true;
+        }
+      }
+
+      if (shouldRefreshCsrf) {
         await getSessionInfo().then((sessionInfo) => {
           setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
         });
