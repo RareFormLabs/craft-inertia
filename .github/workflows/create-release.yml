@@ -22,3 +22,4 @@ jobs:
           name: ${{ github.event.client_payload.version }}
           prerelease: ${{ github.event.client_payload.prerelease }}
           tag: ${{ github.event.client_payload.tag }}
+          allowUpdates: true
