@@ -73,6 +73,26 @@
       document.head.appendChild(csrfMetaEl);
     }
   };
+  const readField = (data, key) => {
+    if (data instanceof FormData) {
+      return data.get(key);
+    }
+    if (typeof data === "object" && data !== null) {
+      return data[key];
+    }
+    if (typeof data === "string") {
+      try {
+        const parsed = JSON.parse(data);
+        if (typeof parsed === "object" && parsed !== null) {
+          return parsed[key];
+        }
+      } catch {
+        const params = new URLSearchParams(data);
+        return params.get(key);
+      }
+    }
+    return void 0;
+  };
   const configureAxios = async () => {
     window.axios.interceptors.request.use(async (config) => {
       if (config.method !== "post" && config.method !== "put") {
@@ -137,7 +157,7 @@
         if (action && requiresFreshCsrf.includes(action)) {
           shouldRefreshCsrf = true;
         } else if (action && action == "users/save-user") {
-          if (!response.config.data.get("userId") && !response.config.data.userId) {
+          if (!readField(response.config.data, "userId")) {
             shouldRefreshCsrf = true;
           }
         }

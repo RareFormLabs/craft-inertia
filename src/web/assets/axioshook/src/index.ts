@@ -139,6 +139,35 @@ const setCsrfOnMeta = (csrfTokenName: string, csrfTokenValue: string): void => {
   }
 };
 
+/**
+ * Reads a field value from various data types (FormData, object, JSON string, URLSearchParams)
+ * @param data The data to read from
+ * @param key The field name
+ * @returns The value if found, otherwise undefined
+ */
+const readField = (data: any, key: string): any => {
+  if (data instanceof FormData) {
+    return data.get(key);
+  }
+  if (typeof data === "object" && data !== null) {
+    return data[key];
+  }
+  if (typeof data === "string") {
+    // Try JSON parse
+    try {
+      const parsed = JSON.parse(data);
+      if (typeof parsed === "object" && parsed !== null) {
+        return parsed[key];
+      }
+    } catch {
+      // Not JSON, try URLSearchParams
+      const params = new URLSearchParams(data);
+      return params.get(key);
+    }
+  }
+  return undefined;
+};
+
 const configureAxios = async () => {
   (window.axios as AxiosInstance).interceptors.request.use(async (config) => {
     if (config.method !== "post" && config.method !== "put") {
@@ -230,10 +259,7 @@ const configureAxios = async () => {
       if (action && requiresFreshCsrf.includes(action)) {
         shouldRefreshCsrf = true;
       } else if (action && action == "users/save-user") {
-        if (
-          !response.config.data.get("userId") &&
-          !response.config.data.userId
-        ) {
+        if (!readField(response.config.data, "userId")) {
           shouldRefreshCsrf = true;
         }
       }
