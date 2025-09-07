@@ -1,5 +1,9 @@
 # Release Notes for Inertia
 
+## 1.0.5 - 2025-09-07
+
+**Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.4...1.0.5
+
 ## 1.0.4 - 2025-09-06
 
 **Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.3...1.0.4
