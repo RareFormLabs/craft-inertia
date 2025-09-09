@@ -59,7 +59,7 @@ Every page in your javascript application is backed by a Twig template which ret
 {{ page('Posts/Index') }}
 ```
 
-Note: templates are passed element variables (`entry` or `category`) automatically when the route is matched to either element type. If you want to pass the element as a prop automatically to your page component, set the `injectElementAsProp` configuration to `true`.
+Note: templates are passed element variables (`entry` or `category`) automatically when the route is matched to either element type.
 
 ## Shared Data
 
@@ -248,11 +248,6 @@ return [
     'assetsDirs' => [
         '@webroot/dist/assets'
     ],
-
-    /**
-     * Whether to inject the route matched element (`entry` or `category`) automatically into the application
-     */
-    'injectElementAsProp' => false,
 
     /**
      * Whether to takeover all routing and forward to Inertia
