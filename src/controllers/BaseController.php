@@ -85,12 +85,12 @@ class BaseController extends Controller
         }
 
         if ($matchesTwigTemplate) {
-            $view = Craft::$app->getView();
-            $view->registerAssetBundle(AxiosHookAsset::class, View::POS_END);
-            return Inertia::getInstance()->renderer->handleMatchedTemplate($specifiedTemplate ?? $inertiaTemplatePath, $uri, $templateVariables);
+            [$pageComponent, $props] = Inertia::getInstance()->renderer->handleMatchedTemplate($specifiedTemplate ?? $inertiaTemplatePath, $uri, $templateVariables);
         } else {
-            return Inertia::getInstance()->errorHandler->render404($request);
+            [$pageComponent, $props] = Inertia::getInstance()->errorHandler->renderError($request, 404);
         }
+
+        return $this->render($pageComponent, $props);
     }
 
     private ?string $only = '';
@@ -105,43 +105,6 @@ class BaseController extends Controller
         }
 
         return true;
-    }
-
-    private function injectYiiDebugToolbar($debug, string $input, $view): string
-    {
-        // Start output buffering
-        ob_start();
-
-        // Set up minimal debug module to get toolbar HTML
-        $debug = Craft::$app->getModule('debug', false);
-
-        // Get debug toolbar
-        $event = new \yii\base\Event();
-        $event->sender = $view;
-        $debug->renderToolbar($event);
-
-        // Get all buffered content
-        $fullOutput = ob_get_clean();
-
-        // Insert debug output before closing body tag
-        return str_replace('</body>', $fullOutput . '</body>', $input);
-
-        /*
-         * Alternative Method
-         * // Capture toolbar HTML
-         * $toolbarHtml = $debug->getToolbarHtml();
-         *
-         * // Get assets
-         * $yiiDebugPath = Craft::getAlias('@vendor/yiisoft/yii2-debug/src');
-         * $toolbarCss = file_get_contents($yiiDebugPath . '/assets/css/toolbar.css');
-         * $toolbarJs = file_get_contents($yiiDebugPath . '/assets/js/toolbar.js');
-         *
-         * // Combine and inject
-         * $debugAssets = $toolbarHtml . "<style>{$toolbarCss}</style><script>{$toolbarJs}</script>";
-         * $output = str_replace('</body>', $debugAssets . '</body>', $output);
-         *
-         * return $output;
-         */
     }
 
     private function handleElementRequest($element, $uri)
@@ -178,6 +141,50 @@ class BaseController extends Controller
 
         $matchesTwigTemplate = Craft::$app->getView()->doesTemplateExist($specifiedTemplate);
         return [$matchesTwigTemplate, $specifiedTemplate, $templateVariables];
+    }
+
+    /**
+     * @param string $pageComponent
+     * @param array $params
+     * @return craft\web\Response|string|array
+     */
+    public function render($pageComponent, $params = []): \craft\web\Response|string|array
+    {
+        // Set params as expected in Inertia protocol
+        // https://inertiajs.com/the-protocol
+        $params = [
+            'component' => $pageComponent,
+            'props' => Inertia::getInstance()->renderer->getInertiaProps($params, $pageComponent),
+            'url' => Craft::$app->request->getUrl(),
+            'version' => $this->getInertiaVersion()
+        ];
+
+        // XHR-Request: just return params
+        if (Craft::$app->request->headers->has('X-Inertia')) {
+            return $params;
+        }
+
+        $inertiaDirectory = Inertia::getInstance()->settings->inertiaDirectory;
+        $baseView = Inertia::getInstance()->settings->view;
+        $template = $inertiaDirectory ? $inertiaDirectory . '/' . $baseView : $baseView;
+
+        // Register our asset bundle
+        $view = Craft::$app->getView();
+        $view->registerAssetBundle(AxiosHookAsset::class, View::POS_END);
+
+        return parent::renderTemplate($template, [
+            'page' => $params
+        ]);
+    }
+
+    /**
+     * Asset version finger print
+     *
+     * @return string
+     */
+    private function getInertiaVersion(): string
+    {
+        return Inertia::getInstance()->getInertiaVersion();
     }
 
 }

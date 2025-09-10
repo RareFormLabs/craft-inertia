@@ -4,6 +4,7 @@ namespace rareform\inertia\services;
 
 use Craft;
 use craft\base\Component;
+use craft\web\Controller as Controller;
 use yii\web\View;
 
 use rareform\inertia\Plugin as Inertia;
@@ -62,44 +63,12 @@ class Renderer extends Component
             // 2. Explicitly defined props in JSON response or via inertia()/page/prop (highest)
             $props = array_merge($templateVariables, $props);
 
-            return Inertia::getInstance()->renderer->render($pageComponent, params: $props);
+            // return Inertia::getInstance()->renderer->render($pageComponent, params: $props);
+            return [$pageComponent, $props];
+
         } catch (\Exception $e) {
             return Inertia::getInstance()->errorHandler->handleError($e);
         }
-    }
-
-    /**
-     * @param string $pageComponent
-     * @param array $params
-     * @return craft\web\Response|string|array
-     */
-    public function render(string $pageComponent, array $params = []): \craft\web\Response|string|array
-    {
-        // Set params as expected in Inertia protocol
-        // https://inertiajs.com/the-protocol
-        $params = [
-            'component' => $pageComponent,
-            'props' => $this->getInertiaProps($params, $pageComponent),
-            'url' => Craft::$app->request->getUrl(),
-            'version' => $this->getInertiaVersion()
-        ];
-
-        // XHR-Request: just return params
-        if (Craft::$app->request->headers->has('X-Inertia')) {
-            return $params;
-        }
-
-        $inertiaDirectory = Inertia::getInstance()->settings->inertiaDirectory;
-        $baseView = Inertia::getInstance()->settings->view;
-        $template = $inertiaDirectory ? $inertiaDirectory . '/' . $baseView : $baseView;
-
-        // Register our asset bundle
-        $view = Craft::$app->getView();
-        $view->registerAssetBundle(AxiosHookAsset::class, View::POS_END);
-
-        return $view->renderTemplate($template, [
-            'page' => $params
-        ]);
     }
 
     /**
@@ -108,7 +77,7 @@ class Renderer extends Component
      * @param array $params
      * @return array
      */
-    private function getInertiaProps($params = [], $view): array
+    public function getInertiaProps($params = [], $view): array
     {
         $session = Craft::$app->session;
 
@@ -227,5 +196,43 @@ class Renderer extends Component
             }
         }
         return $templateVariables;
+    }
+
+    /* Unused. Kept for reference. */
+    private function injectYiiDebugToolbar($debug, string $input, $view): string
+    {
+        // Start output buffering
+        ob_start();
+
+        // Set up minimal debug module to get toolbar HTML
+        $debug = Craft::$app->getModule('debug', false);
+
+        // Get debug toolbar
+        $event = new \yii\base\Event();
+        $event->sender = $view;
+        $debug->renderToolbar($event);
+
+        // Get all buffered content
+        $fullOutput = ob_get_clean();
+
+        // Insert debug output before closing body tag
+        return str_replace('</body>', $fullOutput . '</body>', $input);
+
+        /*
+         * Alternative Method
+         * // Capture toolbar HTML
+         * $toolbarHtml = $debug->getToolbarHtml();
+         *
+         * // Get assets
+         * $yiiDebugPath = Craft::getAlias('@vendor/yiisoft/yii2-debug/src');
+         * $toolbarCss = file_get_contents($yiiDebugPath . '/assets/css/toolbar.css');
+         * $toolbarJs = file_get_contents($yiiDebugPath . '/assets/js/toolbar.js');
+         *
+         * // Combine and inject
+         * $debugAssets = $toolbarHtml . "<style>{$toolbarCss}</style><script>{$toolbarJs}</script>";
+         * $output = str_replace('</body>', $debugAssets . '</body>', $output);
+         *
+         * return $output;
+         */
     }
 }
