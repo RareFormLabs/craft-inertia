@@ -36,7 +36,7 @@ class BaseController extends Controller
 
         $templateVariables = [];
 
-        $requestParams = Craft::$app->getUrlManager()->getRouteParams();
+        $requestParams = $urlManager->getRouteParams();
 
         // If the $requestParams contains a 'variables' associative array, move its contents to the top level and remove 'variables'.
         // Top-level keys take precedence over 'variables' keys; numeric keys are preserved.
@@ -56,7 +56,7 @@ class BaseController extends Controller
             [$matchesTwigTemplate, $specifiedTemplate, $templateVariables] = $this->handleElementRequest($element, $uri);
         } else {
             // 2. Check for explicit template param (e.g., from routes.php) passed via 'template' (handled by InertiaUrlRule)
-            $explicitTemplate = Craft::$app->getUrlManager->getRouteParams()['inertiaTemplate'] ?? null;
+            $explicitTemplate = $urlManager->getRouteParams()['inertiaTemplate'] ?? null;
             if ($explicitTemplate && Craft::$app->getView()->doesTemplateExist($explicitTemplate)) {
                 $matchesTwigTemplate = true;
                 $specifiedTemplate = $explicitTemplate;
