@@ -11,7 +11,7 @@
 ## Key Patterns & Conventions
 
 - **Inertia Responses:**
-  - Use `inertia()` for legacy responses, or `{% page('Component') %}` and `{{ prop('key', value) }}` for explicit, per-prop caching.
+  - Use `{{ page('Component') }}` and `{{ prop('key', value) }}` for explicit, per-prop caching.
   - Each `prop()` call outputs an HTML comment marker (`<!--INERTIA_PROP:{...}-->`) for robust extraction.
   - Shared props: Place logic in `templates/_shared/` using `prop()`; these are auto-included.
 - **DRY Prop Extraction:**
