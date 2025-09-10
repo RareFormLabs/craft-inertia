@@ -3,20 +3,16 @@
 namespace rareform\inertia\controllers;
 
 use Craft;
-use craft\web\UrlManager;
-use Illuminate\Support\Arr;
+
 use craft\elements\Entry;
 use craft\elements\Category;
-use craft\services\Elements;
 
-use yii\web\NotFoundHttpException;
 use yii\web\View;
 
 use craft\web\Controller as Controller;
 use rareform\inertia\Plugin as Inertia;
 use rareform\inertia\helpers\InertiaHelper;
 use rareform\inertia\web\assets\axioshook\AxiosHookAsset;
-use rareform\inertia\services\ErrorHandler;
 
 /**
  * Controller controller
@@ -60,7 +56,7 @@ class BaseController extends Controller
             [$matchesTwigTemplate, $specifiedTemplate, $templateVariables] = $this->handleElementRequest($element, $uri);
         } else {
             // 2. Check for explicit template param (e.g., from routes.php) passed via 'template' (handled by InertiaUrlRule)
-            $explicitTemplate = Craft::$app->UrlManager->getRouteParams()['inertiaTemplate'] ?? null;
+            $explicitTemplate = Craft::$app->getUrlManager->getRouteParams()['inertiaTemplate'] ?? null;
             if ($explicitTemplate && Craft::$app->getView()->doesTemplateExist($explicitTemplate)) {
                 $matchesTwigTemplate = true;
                 $specifiedTemplate = $explicitTemplate;
@@ -154,7 +150,7 @@ class BaseController extends Controller
         // https://inertiajs.com/the-protocol
         $params = [
             'component' => $pageComponent,
-            'props' => Inertia::getInstance()->renderer->getInertiaProps($params, $pageComponent),
+            'props' => Inertia::getInstance()->renderer->getInertiaProps($pageComponent, $params),
             'url' => Craft::$app->request->getUrl(),
             'version' => $this->getInertiaVersion()
         ];

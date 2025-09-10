@@ -6,7 +6,6 @@ use Craft;
 use craft\base\Component;
 
 use rareform\inertia\Plugin as Inertia;
-use rareform\inertia\services\Renderer;
 
 use Twig\Error\Error as TwigError;
 use Twig\Error\LoaderError as TwigLoaderError;

@@ -4,12 +4,11 @@ namespace rareform\inertia\services;
 
 use Craft;
 use craft\base\Component;
-use craft\web\Controller as Controller;
-use yii\web\View;
+use craft\elements\Entry;
+use craft\elements\Category;
 
 use rareform\inertia\Plugin as Inertia;
 use rareform\inertia\helpers\InertiaHelper;
-use rareform\inertia\web\assets\axioshook\AxiosHookAsset;
 
 class Renderer extends Component
 {
@@ -77,7 +76,7 @@ class Renderer extends Component
      * @param array $params
      * @return array
      */
-    public function getInertiaProps($params = [], $view): array
+    public function getInertiaProps($view, $params = []): array
     {
         $session = Craft::$app->session;
 
