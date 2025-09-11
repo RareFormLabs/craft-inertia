@@ -48,6 +48,11 @@ class Plugin extends BasePlugin
             Craft::$app->request->headers->set('X-Requested-With', null);
             Craft::$app->on(Application::EVENT_AFTER_REQUEST, [$this, 'applicationAfterRequestHandler']);
             Craft::$app->response->on(Response::EVENT_BEFORE_SEND, [$this, 'responseBeforeSendHandler']);
+
+            $this->setComponents([
+                'renderer' => \rareform\inertia\services\Renderer::class,
+                'errorHandler' => \rareform\inertia\services\ErrorHandler::class,
+            ]);
         }
 
         // Any code that creates an element query or loads Twig should be deferred until
