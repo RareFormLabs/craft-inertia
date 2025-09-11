@@ -1,5 +1,13 @@
 # Release Notes for Inertia
 
+## 1.0.6 - 2025-09-11
+
+### What's Changed
+
+* Organize and add error pages by @chasegiunta in https://github.com/RareFormLabs/craft-inertia/pull/13
+
+**Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.5...1.0.6
+
 ## 1.0.5 - 2025-09-07
 
 **Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.4...1.0.5
