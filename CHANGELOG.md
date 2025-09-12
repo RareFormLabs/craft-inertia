@@ -1,5 +1,11 @@
 # Release Notes for Inertia
 
+## 1.0.7 - 2025-09-12
+
+- Change ‘recentElementSave’ to ‘elementResponse’, add objects to match Craft
+
+**Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.6...1.0.7
+
 ## 1.0.6 - 2025-09-11
 
 ### What's Changed
