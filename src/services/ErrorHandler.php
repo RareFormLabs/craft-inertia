@@ -22,9 +22,11 @@ class ErrorHandler extends Component
             $exception = $previousException;
         }
 
-        $statusCode = 500;
 
-        if ($statusCode = $exception->statusCode) {
+        $statusCode = 500;
+        // Check if the exception has a statusCode property or method
+        if ((is_object($exception) && property_exists($exception, 'statusCode') && $exception->statusCode) || (method_exists($exception, 'getStatusCode') && $exception->getStatusCode())) {
+            $statusCode = property_exists($exception, 'statusCode') ? $exception->statusCode : $exception->getStatusCode();
             if (!Craft::$app->getConfig()->getGeneral()->devMode) {
                 return $this->renderError(Craft::$app->getRequest(), $statusCode);
             }
