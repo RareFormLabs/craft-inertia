@@ -17,6 +17,7 @@ use craft\events\RegisterUrlRulesEvent;
 use craft\events\SetElementRouteEvent;
 use craft\events\ModelEvent;
 use craft\helpers\App;
+use craft\helpers\ElementHelper;
 use craft\web\Application;
 use craft\web\UrlManager;
 use craft\web\View;
@@ -261,6 +262,16 @@ class Plugin extends BasePlugin
             function (ModelEvent $event) {
                 $entry = $event->sender;
                 if (!Craft::$app->request->isConsoleRequest && !Craft::$app->request->isCpRequest) {
+
+                    if (
+                        $entry->propagating ||
+                        $entry->resaving ||
+                        ElementHelper::isDraft($entry) ||
+                        ElementHelper::isRevision($entry) ||
+                        ElementHelper::rootElement($entry)->isProvisionalDraft
+                    ) {
+                        return;
+                    }
 
                     // Build out element response
                     $elementResponse = [
