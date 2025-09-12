@@ -80,10 +80,10 @@ class Renderer extends Component
     {
         $session = Craft::$app->session;
 
-        if ($session->has('recentElementSave')) {
-            $elementId = $session->get('recentElementSave');
-            $params['recentElementSave'] = $elementId;
-            $session->remove('recentElementSave');
+        if ($session->has('elementResponse')) {
+            $elementId = $session->get('elementResponse');
+            $params['elementResponse'] = $elementId;
+            $session->remove('elementResponse');
         }
 
         $sharedProps = $this->getSharedPropsFromTemplates();

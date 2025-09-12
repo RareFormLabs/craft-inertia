@@ -9,6 +9,8 @@ use craft\base\Element;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
 use craft\elements\Entry;
+use craft\elements\User;
+use craft\elements\Asset;
 use craft\elements\Category;
 use craft\events\RegisterTemplateRootsEvent;
 use craft\events\RegisterUrlRulesEvent;
@@ -254,12 +256,64 @@ class Plugin extends BasePlugin
 
 
         Event::on(
-            Element::class,
-            Element::EVENT_AFTER_SAVE,
+            Entry::class,
+            Entry::EVENT_AFTER_SAVE,
             function (ModelEvent $event) {
-                $element = $event->sender;
+                $entry = $event->sender;
                 if (!Craft::$app->request->isConsoleRequest && !Craft::$app->request->isCpRequest) {
-                    Craft::$app->session->set('recentElementSave', $element->id);
+
+                    // Build out element response
+                    $elementResponse = [
+                        'id' => $entry->id,
+                        'title' => $entry->title,
+                        'slug' => $entry->slug,
+                        'authorUsername' => $entry->getAuthor() !== null ? $entry->getAuthor()->username : null,
+                        'dateCreated' => $entry->dateCreated->format('c'),
+                        'dateUpdated' => $entry->dateUpdated->format('c'),
+                        'postDate' => $entry->postDate ? $entry->postDate->format('c') : null,
+                    ];
+
+                    Craft::$app->session->set('elementResponse', $elementResponse);
+                }
+            }
+        );
+
+        Event::on(
+            User::class,
+            User::EVENT_AFTER_SAVE,
+            function (ModelEvent $event) {
+                $user = $event->sender;
+                if (!Craft::$app->request->isConsoleRequest && !Craft::$app->request->isCpRequest) {
+
+                    // Build out user response
+                    $userResponse = [
+                        'id' => $user->id,
+                        'firstName' => $user->firstName,
+                        'lastName' => $user->lastName,
+                        'fullName' => $user->getFullName(),
+                        'email' => $user->email,
+                    ];
+
+                    Craft::$app->session->set('elementResponse', $userResponse);
+                }
+            }
+        );
+
+        Event::on(
+            Asset::class,
+            Asset::EVENT_AFTER_SAVE,
+            function (ModelEvent $event) {
+                $asset = $event->sender;
+                if (!Craft::$app->request->isConsoleRequest && !Craft::$app->request->isCpRequest) {
+
+                    // Build out asset response
+                    $assetResponse = [
+                        'id' => $asset->id,
+                        'title' => $asset->title,
+                        'url' => $asset->url,
+                    ];
+
+                    Craft::$app->session->set('elementResponse', $assetResponse);
                 }
             }
         );
