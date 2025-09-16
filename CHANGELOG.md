@@ -1,5 +1,12 @@
 # Release Notes for Inertia
 
+## 1.0.8 - 2025-09-16
+
+- Exclude drafts, revisions, and bulk saves from element save responses
+- Exception handling fix
+
+**Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.7...1.0.8
+
 ## 1.0.7 - 2025-09-12
 
 - Change ‘recentElementSave’ to ‘elementResponse’, add objects to match Craft
