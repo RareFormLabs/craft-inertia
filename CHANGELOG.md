@@ -1,5 +1,9 @@
 # Release Notes for Inertia
 
+## 1.0.9 - 2025-09-17
+
+**Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.8...1.0.9
+
 ## 1.0.8 - 2025-09-16
 
 - Exclude drafts, revisions, and bulk saves from element save responses
