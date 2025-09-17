@@ -157,7 +157,8 @@ class BaseController extends Controller
 
         // XHR-Request: just return params
         if (Craft::$app->request->headers->has('X-Inertia')) {
-            return $params;
+            Craft::$app->getResponse()->setStatusCode(200);
+            return parent::asJson($params);
         }
 
         $inertiaDirectory = Inertia::getInstance()->settings->inertiaDirectory;
