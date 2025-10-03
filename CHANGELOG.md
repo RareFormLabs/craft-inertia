@@ -1,5 +1,11 @@
 # Release Notes for Inertia
 
+## 1.1.0 - 2025-10-03
+
+- Pass `message` variable in responses when passing them via `exit` twig functions
+
+**Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.9...1.1.0
+
 ## 1.0.9 - 2025-09-17
 
 **Full Changelog**: https://github.com/RareFormLabs/craft-inertia/compare/1.0.8...1.0.9
