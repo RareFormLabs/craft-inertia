@@ -28,7 +28,7 @@ class ErrorHandler extends Component
         if ((is_object($exception) && property_exists($exception, 'statusCode') && $exception->statusCode) || (method_exists($exception, 'getStatusCode') && $exception->getStatusCode())) {
             $statusCode = property_exists($exception, 'statusCode') ? $exception->statusCode : $exception->getStatusCode();
             if (!Craft::$app->getConfig()->getGeneral()->devMode) {
-                return $this->renderError(Craft::$app->getRequest(), $statusCode);
+                return $this->renderError(Craft::$app->getRequest(), $statusCode, $exception);
             }
             throw $exception;
         }
@@ -62,10 +62,10 @@ class ErrorHandler extends Component
      * @param int $statusCode
      * @return craft\web\Response|string|array
      */
-    public function renderError($request, int $statusCode): craft\web\Response|string|array
+    public function renderError($request, int $statusCode, $exception = null): craft\web\Response|string|array
     {
         Craft::$app->getResponse()->setStatusCode($statusCode);
-        return $this->errorPageRequest($this->resolveErrorTemplate($request, (string) $statusCode));
+        return $this->errorPageRequest($this->resolveErrorTemplate($request, (string) $statusCode), $exception);
     }
 
     /**
@@ -75,7 +75,7 @@ class ErrorHandler extends Component
      * @param string $errorCode
      * @return string
      */
-    protected function resolveErrorTemplate($request, string $errorCode): string
+    protected function resolveErrorTemplate($request, string $errorCode, $exception = null): string
     {
         $view = Craft::$app->getView();
         $template = $errorCode;
@@ -90,7 +90,7 @@ class ErrorHandler extends Component
         return $template;
     }
 
-    public function errorPageRequest($errorCode): craft\web\Response|string|array
+    public function errorPageRequest($errorCode, $exception = null): craft\web\Response|string|array
     {
         $templateVariables = [];
         $requestParams = Craft::$app->getUrlManager()->getRouteParams();
@@ -100,6 +100,11 @@ class ErrorHandler extends Component
         if (isset($requestParams['variables']) && is_array($requestParams['variables'])) {
             $requestParams = $requestParams + $requestParams['variables'];
             unset($requestParams['variables']);
+        }
+
+        // If $exception exists and exception->getMessage() exists, add it to templateVariables as 'message'
+        if ($exception && method_exists($exception, 'getMessage')) {
+            $templateVariables['message'] = $exception->getMessage();
         }
 
         $templateVariables = array_merge($requestParams, $templateVariables);

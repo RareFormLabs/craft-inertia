@@ -10,6 +10,7 @@ use craft\elements\Category;
 use yii\web\View;
 
 use craft\web\Controller as Controller;
+
 use rareform\inertia\Plugin as Inertia;
 use rareform\inertia\helpers\InertiaHelper;
 use rareform\inertia\web\assets\axioshook\AxiosHookAsset;
