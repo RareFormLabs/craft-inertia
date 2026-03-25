@@ -43,9 +43,22 @@ class Renderer extends Component
 
             // Fallback: try to parse from output as before
             if ($pageComponent === null) {
+
+                // If we've explicitly asked to bypass Inertia
+                if (Craft::$app->params['__inertia_bypass'] ?? false) {
+                    return $stringResponse;
+                }
+
                 // Decode JSON object from $stringResponse
                 $jsonData = json_decode($stringResponse, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
+
+                    // If it's a non-standard extension and we didn't find any props, bypass Inertia
+                    $extension = pathinfo($uri, PATHINFO_EXTENSION);
+                    if ($extension && !in_array(strtolower($extension), ['html', 'twig', 'php']) && empty($props)) {
+                        return $stringResponse;
+                    }
+
                     // If we can't decode JSON, log it and use default values
                     Craft::warning('JSON decoding failed: ' . json_last_error_msg() . '. Using default page component and props.', __METHOD__);
                     // Set default page component based on route

@@ -82,7 +82,17 @@ class BaseController extends Controller
         }
 
         if ($matchesTwigTemplate) {
-            [$pageComponent, $props] = Inertia::getInstance()->renderer->handleMatchedTemplate($specifiedTemplate ?? $inertiaTemplatePath, $uri, $templateVariables);
+            $result = Inertia::getInstance()->renderer->handleMatchedTemplate($specifiedTemplate ?? $inertiaTemplatePath, $uri, $templateVariables);
+
+            if (is_string($result)) {
+                $extension = pathinfo($uri, PATHINFO_EXTENSION);
+                if ($extension) {
+                    Craft::$app->getResponse()->setDownloadHeaders(pathinfo($uri, PATHINFO_BASENAME), null, false);
+                }
+                return $result;
+            }
+
+            [$pageComponent, $props] = $result;
         } else {
             [$pageComponent, $props] = Inertia::getInstance()->errorHandler->renderError($request, 404);
         }
