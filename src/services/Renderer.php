@@ -36,28 +36,29 @@ class Renderer extends Component
                 return Inertia::getInstance()->errorHandler->handleError($exception);
             }
 
+            $bypassInertia = Craft::$app->params['__inertia_bypass'] ?? false;
+
             // New pattern: collect from Craft::$app->params
-            $pageComponent = Craft::$app->params['__inertia_page'] ?? null;
+            $pageComponent = $bypassInertia ? null : (Craft::$app->params['__inertia_page'] ?? null);
 
             $props = InertiaHelper::extractInertiaPropsFromString($stringResponse);
 
+            if ($bypassInertia) {
+                return $stringResponse;
+            }
+
             // Fallback: try to parse from output as before
             if ($pageComponent === null) {
+                $extension = strtolower(pathinfo($uri, PATHINFO_EXTENSION));
 
-                // If we've explicitly asked to bypass Inertia
-                if (Craft::$app->params['__inertia_bypass'] ?? false) {
+                // If it's a non-standard extension and we didn't find any props, bypass Inertia
+                if ($extension && !in_array($extension, ['html', 'twig', 'php'], true) && empty($props)) {
                     return $stringResponse;
                 }
 
                 // Decode JSON object from $stringResponse
                 $jsonData = json_decode($stringResponse, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
-
-                    // If it's a non-standard extension and we didn't find any props, bypass Inertia
-                    $extension = pathinfo($uri, PATHINFO_EXTENSION);
-                    if ($extension && !in_array(strtolower($extension), ['html', 'twig', 'php']) && empty($props)) {
-                        return $stringResponse;
-                    }
 
                     // If we can't decode JSON, log it and use default values
                     Craft::warning('JSON decoding failed: ' . json_last_error_msg() . '. Using default page component and props.', __METHOD__);

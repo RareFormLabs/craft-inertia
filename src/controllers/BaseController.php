@@ -8,6 +8,7 @@ use craft\elements\Entry;
 use craft\elements\Category;
 
 use yii\web\View;
+use yii\helpers\FileHelper;
 
 use craft\web\Controller as Controller;
 
@@ -85,10 +86,7 @@ class BaseController extends Controller
             $result = Inertia::getInstance()->renderer->handleMatchedTemplate($specifiedTemplate ?? $inertiaTemplatePath, $uri, $templateVariables);
 
             if (is_string($result)) {
-                $extension = pathinfo($uri, PATHINFO_EXTENSION);
-                if ($extension) {
-                    Craft::$app->getResponse()->setDownloadHeaders(pathinfo($uri, PATHINFO_BASENAME), null, false);
-                }
+                $this->prepareStringResponse($uri);
                 return $result;
             }
 
@@ -101,6 +99,36 @@ class BaseController extends Controller
     }
 
     private ?string $only = '';
+
+    private function prepareStringResponse(string $uri): void
+    {
+        $extension = strtolower(pathinfo($uri, PATHINFO_EXTENSION));
+        if (!$extension) {
+            return;
+        }
+
+        $response = Craft::$app->getResponse();
+        $headers = $response->getHeaders();
+
+        if ($headers->has('Content-Disposition') || $headers->has('Content-Type')) {
+            return;
+        }
+
+        $mimeType = FileHelper::getMimeTypeByExtension($uri) ?: 'application/octet-stream';
+        $explicitBypass = (bool)(Craft::$app->params['__inertia_bypass'] ?? false);
+
+        if ($explicitBypass || $this->shouldForceAttachment($extension)) {
+            $response->setDownloadHeaders(pathinfo($uri, PATHINFO_BASENAME), $mimeType, false);
+            return;
+        }
+
+        $headers->setDefault('Content-Type', $mimeType);
+    }
+
+    private function shouldForceAttachment(string $extension): bool
+    {
+        return !in_array($extension, ['html', 'htm', 'twig', 'php', 'xml', 'json', 'webmanifest', 'txt', 'js', 'mjs', 'css', 'map', 'svg'], true);
+    }
 
     /*
      * Capture request for partial reload
