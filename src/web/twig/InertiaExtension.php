@@ -59,8 +59,13 @@ class InertiaExtension extends AbstractExtension
                 return '';
             }),
 
-            new TwigFunction('bypass', function () {
+            new TwigFunction('bypass', function (bool $download = false) {
                 Craft::$app->params['__inertia_bypass'] = true;
+
+                if ($download) {
+                    Craft::$app->params['__inertia_download'] = true;
+                }
+
                 return '';
             }),
 

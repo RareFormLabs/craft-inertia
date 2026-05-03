@@ -115,9 +115,9 @@ class BaseController extends Controller
         }
 
         $mimeType = FileHelper::getMimeTypeByExtension($uri) ?: 'application/octet-stream';
-        $explicitBypass = (bool)(Craft::$app->params['__inertia_bypass'] ?? false);
+        $shouldDownload = (bool)(Craft::$app->params['__inertia_download'] ?? false);
 
-        if ($explicitBypass || $this->shouldForceAttachment($extension)) {
+        if ($shouldDownload || $this->shouldForceAttachment($extension)) {
             $response->setDownloadHeaders(pathinfo($uri, PATHINFO_BASENAME), $mimeType, false);
             return;
         }
@@ -127,7 +127,7 @@ class BaseController extends Controller
 
     private function shouldForceAttachment(string $extension): bool
     {
-        return !in_array($extension, ['html', 'htm', 'twig', 'php', 'xml', 'json', 'webmanifest', 'txt', 'js', 'mjs', 'css', 'map', 'svg'], true);
+        return in_array($extension, ['zip', 'tar', 'gz', 'tgz', 'bz2', 'xz', '7z', 'rar', 'pdf', 'exe', 'dmg', 'pkg', 'msi'], true);
     }
 
     /*
