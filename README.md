@@ -4,7 +4,7 @@
 
 This is a server-side adapter for [Inertia](https://inertiajs.com) built with Craft CMS workflow simplicity in mind.
 
-It utilizes Craft's routing, as well as _Twig_ for crafting Inertia responses, rather than requiring they be written directly in PHP (as a traditional Inertia application does).
+It utilizes Craft's routing, and supports both _Twig_ and PHP-backed controller responses for crafting Inertia pages.
 
 [Ping CRM Demo](https://pingcrm.rareformlabs.com) — [Ping CRM Repo](https://github.com/rareformlabs/pingcrm)
 
@@ -32,7 +32,7 @@ php craft plugin/install inertia
 Be sure to follow the installation instructions for the [client-side framework](https://inertiajs.com/client-side-setup) you use.
 
 > [!NOTE]
-> Upon installing, the Inertia adapter will takeover all routing and expect all templates to respond with inertia protocol responses. To prevent this, you may set the `takeoverRouting` [config option](#configuration) to `false`
+> The recommended mode is explicit opt-in routing. Inertia routes can coexist with normal Craft routing and normal Twig rendering without taking over the whole site.
 
 > [!IMPORTANT]
 >
@@ -60,6 +60,28 @@ Every page in your javascript application is backed by a Twig template which ret
 ```
 
 Note: templates are passed element variables (`entry` or `category`) automatically when the route is matched to either element type.
+
+## PHP Controllers
+
+You can also return Inertia pages directly from PHP controllers:
+
+```php
+use rareform\inertia\Plugin as Inertia;
+
+class EventsController extends \craft\web\Controller
+{
+    protected array|int|bool $allowAnonymous = self::ALLOW_ANONYMOUS_LIVE;
+
+    public function actionShow(): \craft\web\Response
+    {
+        return Inertia::getInstance()->render('Events/Show', [
+            'event' => [
+                'title' => 'Launch Party',
+            ],
+        ]);
+    }
+}
+```
 
 ## Shared Data
 
@@ -250,13 +272,18 @@ return [
     ],
 
     /**
-     * Whether to takeover all routing and forward to Inertia
-     * If set to false, you can use Inertia in parallel to normal twig templates
-     * Route rules will need to be set in config/routes.php, eg:
-     * '' => 'inertia/base/index',
-     * '<catchall:.+>' => 'inertia/base/index',
+     * Routing mode:
+     * - 'opt-in' keeps normal Craft routing as the default
+     * - 'catchall' makes Inertia handle all site routes
      */
-    'takeoverRouting' => true,
+    'routingMode' => 'opt-in',
+
+    /**
+     * Deprecated alias for routingMode:
+     * true => 'catchall'
+     * false => 'opt-in'
+     */
+    'takeoverRouting' => null,
 ];
 ```
 

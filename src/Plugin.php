@@ -3,26 +3,19 @@
 namespace rareform\inertia;
 
 use Craft;
-use rareform\inertia\models\Settings;
-use rareform\inertia\web\twig\InertiaExtension;
-use craft\base\Element;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
-use craft\elements\Entry;
-use craft\elements\User;
-use craft\elements\Asset;
+use craft\base\Element;
 use craft\elements\Category;
-use craft\events\RegisterTemplateRootsEvent;
+use craft\elements\Entry;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\SetElementRouteEvent;
-use craft\events\ModelEvent;
 use craft\helpers\App;
-use craft\helpers\ElementHelper;
 use craft\web\Application;
 use craft\web\UrlManager;
-use craft\web\View;
+use rareform\inertia\models\Settings;
+use rareform\inertia\web\twig\InertiaExtension;
 use yii\base\Event;
-use yii\web\BadRequestHttpException;
 use yii\web\Response;
 
 class Plugin extends BasePlugin
@@ -31,7 +24,9 @@ class Plugin extends BasePlugin
     {
         return [
             'components' => [
-                // Define component configs here...
+                'renderer' => \rareform\inertia\services\Renderer::class,
+                'errorHandler' => \rareform\inertia\services\ErrorHandler::class,
+                'pageResolver' => \rareform\inertia\services\PageResolver::class,
             ],
         ];
     }
@@ -45,22 +40,11 @@ class Plugin extends BasePlugin
 
         $this->attachEventHandlers();
 
-        // Don't do anything if it is not a frontend request
         if (Craft::$app->request->isSiteRequest) {
-            // Unset header since at least yii\web\ErrorAction is testing it
-            Craft::$app->request->headers->set('X-Requested-With', null);
             Craft::$app->on(Application::EVENT_AFTER_REQUEST, [$this, 'applicationAfterRequestHandler']);
             Craft::$app->response->on(Response::EVENT_BEFORE_SEND, [$this, 'responseBeforeSendHandler']);
-
-            $this->setComponents([
-                'renderer' => \rareform\inertia\services\Renderer::class,
-                'errorHandler' => \rareform\inertia\services\ErrorHandler::class,
-            ]);
         }
 
-        // Any code that creates an element query or loads Twig should be deferred until
-        // after Craft is fully initialized, to avoid conflicts with other plugins/modules
-        Craft::$app->onInit(function () { /** ... */});
         Craft::$app->view->registerTwigExtension(new InertiaExtension());
     }
 
@@ -87,12 +71,10 @@ class Plugin extends BasePlugin
     public function responseBeforeSendHandler($event): void
     {
         $request = Craft::$app->getRequest();
-        $method = $request->getMethod();
 
         /** @var Response $response */
         $response = $event->sender;
 
-        // Set fresh CSRF Token in first request
         if (!$request->headers->has('X-Inertia')) {
             if ($request->enableCsrfValidation) {
                 $request->getCsrfToken(true);
@@ -100,31 +82,12 @@ class Plugin extends BasePlugin
             return;
         }
 
-        // XHR-Request: Return as JSON
-        if ($response->isOk) {
-            $response->format = Response::FORMAT_JSON;
-            $response->headers->set('X-Inertia', 'true');
-        }
-
-        // Check for changed assets
-        if ($method === 'GET') {
-            if ($request->headers->has('X-Inertia-Version')) {
-                $version = $request->headers->get('X-Inertia-Version', null, true);
-                if ($version !== $this->getInertiaVersion()) {
-                    $response->setStatusCode(409);
-                    $response->headers->set('X-Inertia-Location', $request->getAbsoluteUrl());
-                    return;
-                }
-            }
-        }
-
-        // Adjust Statuscode
-        if ($response->getIsRedirection()) {
-            if ($response->getStatusCode() === 302) {
-                if (in_array($method, ['PUT', 'PATCH', 'DELETE'])) {
-                    $response->setStatusCode(303);
-                }
-            }
+        if (
+            $response->getIsRedirection() &&
+            $response->getStatusCode() === 302 &&
+            in_array($request->getMethod(), ['PUT', 'PATCH', 'DELETE'], true)
+        ) {
+            $response->setStatusCode(303);
         }
     }
 
@@ -181,45 +144,41 @@ class Plugin extends BasePlugin
         return Craft::createObject(Settings::class);
     }
 
+    public function getRoutingMode(): string
+    {
+        return $this->settings->getResolvedRoutingMode();
+    }
+
+    public function isCatchallRoutingEnabled(): bool
+    {
+        return $this->getRoutingMode() === 'catchall';
+    }
+
+    public function render(string $component, array $props = []): Response
+    {
+        return $this->renderer->renderComponent($component, $props);
+    }
+
     private function attachEventHandlers(): void
     {
         Event::on(
             UrlManager::class,
             UrlManager::EVENT_REGISTER_SITE_URL_RULES,
             function (RegisterUrlRulesEvent $event) {
-                if (!$this->settings->takeoverRouting) {
-                    foreach ($event->rules as &$rule) {
-                        if (is_array($rule) && !empty($rule['inertia'])) {
-                            $rule['class'] = 'rareform\inertia\web\InertiaUrlRule';
-                        }
+                foreach ($event->rules as &$rule) {
+                    if (is_array($rule) && !empty($rule['inertia'])) {
+                        $rule['class'] = 'rareform\inertia\web\InertiaUrlRule';
                     }
                 }
-            }
-        );
 
-        // Register Inertia URL rules absolutely last
-        Event::on(Application::class, Application::EVENT_INIT, function () {
-            Event::on(
-                UrlManager::class,
-                UrlManager::EVENT_REGISTER_SITE_URL_RULES,
-                function (RegisterUrlRulesEvent $event) {
+                if ($this->isCatchallRoutingEnabled()) {
                     $event->rules = array_merge($event->rules, [
                         '' => 'inertia/base/index',
                         '<catchall:.+>' => 'inertia/base/index',
                     ]);
                 }
-            );
-        });
-
-        // Enable use of default template on the frontend
-        Event::on(
-            View::class,
-            View::EVENT_REGISTER_SITE_TEMPLATE_ROOTS,
-            function (RegisterTemplateRootsEvent $event) {
-                $event->roots['inertia'] = __DIR__ . '/templates';
             }
         );
-
 
         // Catch element routes set in Craft's CP
         // and route them to the Inertia controller
@@ -227,22 +186,24 @@ class Plugin extends BasePlugin
             Element::class,
             Element::EVENT_SET_ROUTE,
             function (SetElementRouteEvent $event) {
-                $element = $event->sender;
-                if (!$element)
+                if (!$this->isCatchallRoutingEnabled()) {
                     return;
+                }
+
+                $element = $event->sender;
+                if (!$element) {
+                    return;
+                }
 
                 $isCraftElement = $element instanceof Entry || $element instanceof Category;
-                if (!$isCraftElement)
+                if (!$isCraftElement) {
                     return;
+                }
 
                 $event->route = 'inertia/base/index';
-
-                // Explicitly tell the element that a route has been set,
-                // and prevent other event handlers from running
                 $event->handled = true;
             }
         );
-
 
         // After validation, set the current element to be used in the controller
         // so that validation errors can be injected into the template
@@ -252,80 +213,6 @@ class Plugin extends BasePlugin
             function (Event $event) {
                 $element = $event->sender;
                 Craft::$container->set('currentElement', $element);
-            }
-        );
-
-
-        Event::on(
-            Entry::class,
-            Entry::EVENT_AFTER_SAVE,
-            function (ModelEvent $event) {
-                $entry = $event->sender;
-                if (!Craft::$app->request->isConsoleRequest && !Craft::$app->request->isCpRequest) {
-
-                    if (
-                        $entry->propagating ||
-                        $entry->resaving ||
-                        ElementHelper::isDraft($entry) ||
-                        ElementHelper::isRevision($entry) ||
-                        ElementHelper::rootElement($entry)->isProvisionalDraft
-                    ) {
-                        return;
-                    }
-
-                    // Build out element response
-                    $elementResponse = [
-                        'id' => $entry->id,
-                        'title' => $entry->title,
-                        'slug' => $entry->slug,
-                        'authorUsername' => $entry->getAuthor() !== null ? $entry->getAuthor()->username : null,
-                        'dateCreated' => $entry->dateCreated->format('c'),
-                        'dateUpdated' => $entry->dateUpdated->format('c'),
-                        'postDate' => $entry->postDate ? $entry->postDate->format('c') : null,
-                    ];
-
-                    Craft::$app->session->set('elementResponse', $elementResponse);
-                }
-            }
-        );
-
-        Event::on(
-            User::class,
-            User::EVENT_AFTER_SAVE,
-            function (ModelEvent $event) {
-                $user = $event->sender;
-                if (!Craft::$app->request->isConsoleRequest && !Craft::$app->request->isCpRequest) {
-
-                    // Build out user response
-                    $userResponse = [
-                        'id' => $user->id,
-                        'firstName' => $user->firstName,
-                        'lastName' => $user->lastName,
-                        'fullName' => $user->getFullName(),
-                        'email' => $user->email,
-                    ];
-
-                    Craft::$app->session->set('elementResponse', $userResponse);
-                }
-            }
-        );
-
-        Event::on(
-            Asset::class,
-            Asset::EVENT_AFTER_SAVE,
-            function (ModelEvent $event) {
-                $asset = $event->sender;
-                if (!Craft::$app->request->isConsoleRequest && !Craft::$app->request->isCpRequest) {
-
-                    // Build out asset response
-                    $assetResponse = [
-                        'id' => $asset->id,
-                        'title' => $asset->title,
-                        'url' => $asset->url,
-                    ];
-
-                    Craft::$app->session->set('elementResponse', $assetResponse);
-                }
             }
         );
     }
