@@ -8,6 +8,7 @@ use craft\elements\Entry;
 use craft\elements\Category;
 
 use yii\web\View;
+use yii\helpers\FileHelper;
 
 use craft\web\Controller as Controller;
 
@@ -82,7 +83,14 @@ class BaseController extends Controller
         }
 
         if ($matchesTwigTemplate) {
-            [$pageComponent, $props] = Inertia::getInstance()->renderer->handleMatchedTemplate($specifiedTemplate ?? $inertiaTemplatePath, $uri, $templateVariables);
+            $result = Inertia::getInstance()->renderer->handleMatchedTemplate($specifiedTemplate ?? $inertiaTemplatePath, $uri, $templateVariables);
+
+            if (is_string($result)) {
+                $this->prepareStringResponse($uri);
+                return $result;
+            }
+
+            [$pageComponent, $props] = $result;
         } else {
             [$pageComponent, $props] = Inertia::getInstance()->errorHandler->renderError($request, 404);
         }
@@ -91,6 +99,36 @@ class BaseController extends Controller
     }
 
     private ?string $only = '';
+
+    private function prepareStringResponse(string $uri): void
+    {
+        $extension = strtolower(pathinfo($uri, PATHINFO_EXTENSION));
+        if (!$extension) {
+            return;
+        }
+
+        $response = Craft::$app->getResponse();
+        $headers = $response->getHeaders();
+
+        if ($headers->has('Content-Disposition') || $headers->has('Content-Type')) {
+            return;
+        }
+
+        $mimeType = FileHelper::getMimeTypeByExtension($uri) ?: 'application/octet-stream';
+        $shouldDownload = (bool)(Craft::$app->params['__inertia_download'] ?? false);
+
+        if ($shouldDownload || $this->shouldForceAttachment($extension)) {
+            $response->setDownloadHeaders(pathinfo($uri, PATHINFO_BASENAME), $mimeType, false);
+            return;
+        }
+
+        $headers->setDefault('Content-Type', $mimeType);
+    }
+
+    private function shouldForceAttachment(string $extension): bool
+    {
+        return in_array($extension, ['zip', 'tar', 'gz', 'tgz', 'bz2', 'xz', '7z', 'rar', 'pdf', 'exe', 'dmg', 'pkg', 'msi'], true);
+    }
 
     /*
      * Capture request for partial reload
