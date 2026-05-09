@@ -146,14 +146,11 @@ class Renderer extends Component
             return $page;
         }
 
-        $fallbackProps = InertiaHelper::extractInertiaPropsFromString($stringResponse);
-        $page->props = array_merge($fallbackProps, $page->props);
+        $page->props = $this->extractCapturedProps($stringResponse, $page);
 
         if ($page->component === null) {
             $this->applyLegacyResponseFallback($page, $stringResponse, $uri);
         }
-
-        $page->props = array_merge($templateVariables, $page->props);
 
         return $page;
     }
@@ -181,10 +178,7 @@ class Renderer extends Component
 
             if (Craft::$app->getView()->doesTemplateExist($templatePath)) {
                 [$page, $stringResponse] = $this->captureTemplateOutput($templatePath);
-                $props = array_merge(
-                    InertiaHelper::extractInertiaPropsFromString($stringResponse),
-                    $page->props
-                );
+                $props = $this->extractCapturedProps($stringResponse, $page);
                 $allSharedProps = array_merge($allSharedProps, $props);
             }
         }
@@ -293,6 +287,14 @@ class Renderer extends Component
 
         $page->component = $jsonData['component'] ?? ($uri ?: 'Index');
         $page->props = $jsonData['props'] ?? [];
+    }
+
+    private function extractCapturedProps(string $stringResponse, InertiaPage $page): array
+    {
+        return array_merge(
+            InertiaHelper::extractInertiaPropsFromString($stringResponse),
+            $page->props
+        );
     }
 
     private function createVersionConflictResponse(\craft\web\Request $request): Response

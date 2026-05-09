@@ -12,6 +12,9 @@ use rareform\inertia\Plugin as Inertia;
 
 class PageResolver extends Component
 {
+    /**
+     * @return array{template: string, uri: string, variables: array}|null
+     */
     public function resolveCurrentRequest(): ?array
     {
         $request = Craft::$app->getRequest();
@@ -22,9 +25,9 @@ class PageResolver extends Component
         $explicitTemplate = $routeParams['inertiaTemplate'] ?? null;
         unset($routeParams['inertiaTemplate']);
 
-        if ($explicitTemplate && Craft::$app->getView()->doesTemplateExist($explicitTemplate)) {
+        if ($explicitTemplate && ($resolvedTemplate = $this->resolveTemplateCandidate($explicitTemplate)) !== null) {
             return [
-                'template' => $explicitTemplate,
+                'template' => $resolvedTemplate,
                 'uri' => $uri,
                 'variables' => $routeParams,
             ];
@@ -55,6 +58,9 @@ class PageResolver extends Component
         return null;
     }
 
+    /**
+     * @return array{template: string, uri: string, variables: array}|null
+     */
     public function resolveErrorTemplate(int $statusCode, ?\Throwable $exception = null): ?array
     {
         $request = Craft::$app->getRequest();
@@ -78,6 +84,9 @@ class PageResolver extends Component
         return null;
     }
 
+    /**
+     * @return array{template: string, uri: string, variables: array}|null
+     */
     private function resolveElementRequest(ElementInterface $element, string $uri, array $routeParams): ?array
     {
         $sectionOrGroup = $element instanceof Entry ? $element->getSection() : ($element instanceof Category ? $element->getGroup() : null);

@@ -6,6 +6,7 @@ use Craft;
 use craft\base\Component;
 use rareform\inertia\Plugin as Inertia;
 use Twig\Error\RuntimeError as TwigRuntimeError;
+use yii\web\Response as YiiResponse;
 
 class ErrorHandler extends Component
 {
@@ -56,8 +57,8 @@ class ErrorHandler extends Component
 
         $response = Craft::$app->getResponse();
         $response->setStatusCode($statusCode);
-        $response->format = \yii\web\Response::FORMAT_RAW;
-        $response->content = $exception?->getMessage() ?? (string)$statusCode;
+        $response->format = YiiResponse::FORMAT_RAW;
+        $response->content = $this->getFallbackErrorContent($statusCode, $exception);
 
         return $response;
     }
@@ -73,5 +74,22 @@ class ErrorHandler extends Component
         }
 
         return 500;
+    }
+
+    private function getFallbackErrorContent(int $statusCode, ?\Throwable $exception): string
+    {
+        $message = $exception?->getMessage();
+        $devMode = Craft::$app->getConfig()->getGeneral()->devMode;
+        $isClientError = $statusCode >= 400 && $statusCode < 500;
+
+        if ($devMode && $message) {
+            return $message;
+        }
+
+        if ($isClientError) {
+            return $message ?: (YiiResponse::$httpStatuses[$statusCode] ?? (string)$statusCode);
+        }
+
+        return 'An error occurred';
     }
 }

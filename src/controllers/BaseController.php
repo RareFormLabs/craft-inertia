@@ -16,15 +16,10 @@ class BaseController extends Controller
     {
         try {
             $resolvedPage = Inertia::getInstance()->pageResolver->resolveCurrentRequest();
-        } catch (\Throwable $exception) {
-            return Inertia::getInstance()->errorHandler->handleError($exception);
-        }
+            if ($resolvedPage === null) {
+                return Inertia::getInstance()->errorHandler->renderError(Craft::$app->getRequest(), 404);
+            }
 
-        if ($resolvedPage === null) {
-            return Inertia::getInstance()->errorHandler->renderError(Craft::$app->getRequest(), 404);
-        }
-
-        try {
             return Inertia::getInstance()->renderer->renderTemplateResponse(
                 $resolvedPage['template'],
                 $resolvedPage['uri'],
