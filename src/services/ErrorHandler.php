@@ -65,12 +65,13 @@ class ErrorHandler extends Component
 
     private function determineStatusCode(\Throwable $exception): int
     {
-        if (property_exists($exception, 'statusCode') && $exception->statusCode) {
-            return (int)$exception->statusCode;
-        }
-
         if (method_exists($exception, 'getStatusCode') && $exception->getStatusCode()) {
             return (int)$exception->getStatusCode();
+        }
+
+        $publicProperties = get_object_vars($exception);
+        if (!empty($publicProperties['statusCode'])) {
+            return (int)$publicProperties['statusCode'];
         }
 
         return 500;
