@@ -5,6 +5,7 @@ namespace rareform\inertia\services;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
 use rareform\inertia\helpers\InertiaHelper;
@@ -21,6 +22,7 @@ class PageResolver extends Component
         $urlManager = Craft::$app->getUrlManager();
         $uri = $request->getPathInfo();
         $routeParams = $this->normalizeRouteParams($urlManager->getRouteParams());
+        $element = $this->findMatchedElement($uri);
 
         $explicitTemplate = $routeParams['inertiaTemplate'] ?? null;
         unset($routeParams['inertiaTemplate']);
@@ -29,17 +31,12 @@ class PageResolver extends Component
             return [
                 'template' => $resolvedTemplate,
                 'uri' => $uri,
-                'variables' => $routeParams,
+                'variables' => $this->injectMatchedElementVariables($element, $uri, $routeParams),
             ];
         }
 
         if (!Inertia::getInstance()->isCatchallRoutingEnabled()) {
             return null;
-        }
-
-        $element = $urlManager->getMatchedElement();
-        if (!$element && $uri !== '') {
-            $element = Craft::$app->getElements()->getElementByUri($uri);
         }
 
         if ($element) {
@@ -56,6 +53,31 @@ class PageResolver extends Component
         }
 
         return null;
+    }
+
+    private function findMatchedElement(string $uri): ?ElementInterface
+    {
+        $element = Craft::$app->getUrlManager()->getMatchedElement();
+        if (!$element && $uri !== '') {
+            $element = Craft::$app->getElements()->getElementByUri($uri);
+        }
+
+        return $element instanceof ElementInterface ? $element : null;
+    }
+
+    private function injectMatchedElementVariables(?ElementInterface $element, string $uri, array $variables): array
+    {
+        if ($element === null) {
+            return $variables;
+        }
+
+        if ($element instanceof Entry || $element instanceof Category) {
+            $variables = $this->injectElementRouteVariables($element, $uri, $variables);
+        }
+
+        $variables[$this->elementVariableName($element)] = $element;
+
+        return $variables;
     }
 
     /**
@@ -108,19 +130,7 @@ class PageResolver extends Component
             return null;
         }
 
-        $templateVariables = $routeParams;
-        if ($siteSetting->uriFormat && str_contains($siteSetting->uriFormat, '{')) {
-            $templateVariables = array_merge(
-                $templateVariables,
-                InertiaHelper::extractUriParameters($uri, $siteSetting->uriFormat)
-            );
-        }
-
-        if ($element instanceof Entry) {
-            $templateVariables['entry'] = $element;
-        } elseif ($element instanceof Category) {
-            $templateVariables['category'] = $element;
-        }
+        $templateVariables = $this->injectMatchedElementVariables($element, $uri, $routeParams);
 
         if (!Craft::$app->getView()->doesTemplateExist($siteSetting->template)) {
             return null;
@@ -141,6 +151,36 @@ class PageResolver extends Component
         }
 
         return $routeParams;
+    }
+
+    private function injectElementRouteVariables(ElementInterface $element, string $uri, array $variables): array
+    {
+        $sectionOrGroup = $element instanceof Entry ? $element->getSection() : ($element instanceof Category ? $element->getGroup() : null);
+        if ($sectionOrGroup === null) {
+            return $variables;
+        }
+
+        $site = Craft::$app->getSites()->getCurrentSite();
+        foreach ($sectionOrGroup->getSiteSettings() as $setting) {
+            if ($setting->siteId === $site->id && $setting->uriFormat && str_contains($setting->uriFormat, '{')) {
+                return array_merge(
+                    $variables,
+                    InertiaHelper::extractUriParameters($uri, $setting->uriFormat)
+                );
+            }
+        }
+
+        return $variables;
+    }
+
+    private function elementVariableName(ElementInterface $element): string
+    {
+        return match (true) {
+            $element instanceof Entry => 'entry',
+            $element instanceof Category => 'category',
+            $element instanceof Asset => 'asset',
+            default => lcfirst((new \ReflectionClass($element))->getShortName()),
+        };
     }
 
     private function resolveTemplateCandidate(string $template): ?string
