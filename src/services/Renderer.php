@@ -121,7 +121,7 @@ class Renderer extends Component
         $view->registerAssetBundle(AxiosHookAsset::class, View::POS_END);
 
         $response->format = Response::FORMAT_RAW;
-        $response->content = $view->renderTemplate($this->resolveRootView($page->rootView), [
+        $response->content = $view->renderPageTemplate($this->resolveRootView($page->rootView), [
             'page' => $payload,
         ]);
 
