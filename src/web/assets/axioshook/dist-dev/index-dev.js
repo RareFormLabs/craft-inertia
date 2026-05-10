@@ -40,6 +40,83 @@
 			csrfTokenValue: tokenValue ?? ""
 		};
 	};
+	var isFormDataLike = (value) => {
+		if (typeof FormData !== "undefined" && value instanceof FormData) return true;
+		if (!value || typeof value !== "object") return false;
+		return typeof value.append === "function" && typeof value.get === "function" && typeof value.has === "function";
+	};
+	var isRecord = (value) => {
+		return typeof value === "object" && value !== null && !Array.isArray(value);
+	};
+	var composeFormKey = (parent, key) => {
+		if (!parent) return key;
+		return `${parent}[${key}]`;
+	};
+	var appendObjectToFormData = (form, key, value) => {
+		if (Array.isArray(value)) {
+			value.forEach((item, index) => {
+				appendObjectToFormData(form, composeFormKey(key, index.toString()), item);
+			});
+			return;
+		}
+		if (value instanceof Date) {
+			form.append(key, value.toISOString());
+			return;
+		}
+		if (typeof File !== "undefined" && value instanceof File) {
+			form.append(key, value, value.name);
+			return;
+		}
+		if (value instanceof Blob) {
+			form.append(key, value);
+			return;
+		}
+		if (typeof value === "boolean") {
+			form.append(key, value ? "1" : "0");
+			return;
+		}
+		if (typeof value === "string") {
+			form.append(key, value);
+			return;
+		}
+		if (typeof value === "number") {
+			form.append(key, `${value}`);
+			return;
+		}
+		if (value === null || value === void 0) {
+			form.append(key, "");
+			return;
+		}
+		if (isRecord(value)) Object.entries(value).forEach(([childKey, childValue]) => {
+			appendObjectToFormData(form, composeFormKey(key, childKey), childValue);
+		});
+	};
+	var objectToFormData = (source) => {
+		const form = new FormData();
+		Object.entries(source).forEach(([key, value]) => {
+			appendObjectToFormData(form, key, value);
+		});
+		return form;
+	};
+	var toRequestFormData = (data) => {
+		if (isFormDataLike(data)) return data;
+		if (data instanceof URLSearchParams) return objectToFormData(Object.fromEntries(data.entries()));
+		if (typeof data === "string") {
+			try {
+				const parsed = JSON.parse(data);
+				if (isRecord(parsed)) return objectToFormData(parsed);
+			} catch {
+				return objectToFormData(Object.fromEntries(new URLSearchParams(data).entries()));
+			}
+			return null;
+		}
+		if (isRecord(data)) return objectToFormData(replaceEmptyArrays(data));
+		return null;
+	};
+	var setFormDataValue = (form, key, value) => {
+		form.delete(key);
+		form.append(key, value);
+	};
 	/**
 	* Replaces empty arrays in an object with an empty string, up to a max depth.
 	* @param obj The object to process
@@ -51,10 +128,6 @@
 		if (Array.isArray(obj)) return obj.map((item) => replaceEmptyArrays(item, maxDepth, currentDepth + 1));
 		else if (typeof obj === "object" && obj !== null) return Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, Array.isArray(value) && value.length === 0 ? "" : replaceEmptyArrays(value, maxDepth, currentDepth + 1)]));
 		return obj;
-	};
-	var getContentType = (headers) => {
-		if (typeof headers.get === "function") return headers.get("content-type");
-		for (const key in headers) if (key.toLowerCase() === "content-type") return headers[key];
 	};
 	var setCsrfOnMeta = (csrfTokenName, csrfTokenValue) => {
 		let csrfMetaEl = document.head.querySelector("meta[csrf]");
@@ -76,7 +149,7 @@
 	* @returns The value if found, otherwise undefined
 	*/
 	var readField = (data, key) => {
-		if (data instanceof FormData) return data.get(key);
+		if (isFormDataLike(data)) return data.get(key);
 		if (typeof data === "object" && data !== null) return data[key];
 		if (typeof data === "string") try {
 			const parsed = JSON.parse(data);
@@ -87,14 +160,11 @@
 	};
 	var configureHttpClient = async () => {
 		http.onRequest(async (config) => {
-			debugger;
 			if (config.method !== "post" && config.method !== "put") return config;
 			let csrfMeta = getTokenFromMeta();
 			if (!csrfMeta) {
 				sessionInfo = await getSessionInfo();
-				debugger;
 				if (sessionInfo.isGuest) {
-					debugger;
 					setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
 					csrfMeta = getTokenFromMeta();
 				}
@@ -102,28 +172,23 @@
 			const csrf = csrfMeta || sessionInfo;
 			if (!csrf) throw new Error("Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present.");
 			const actionPath = getActionPath(config.url ?? "");
-			if (getContentType(config.headers) == void 0) config.headers["Content-Type"] = "application/x-www-form-urlencoded";
-			if (config.data instanceof FormData) {
-				if (!config.data.has("action")) {
-					config.data.append("action", actionPath);
-					config.url = "";
-				}
-				config.data.append(csrf.csrfTokenName, csrf.csrfTokenValue);
-			} else {
-				let data = {
-					[csrf.csrfTokenName]: csrf.csrfTokenValue,
-					action: actionPath,
-					...config.data
-				};
-				const contentType = getContentType(config.headers ?? {});
-				if (typeof contentType === "string" && contentType.toLowerCase().includes("multipart/form-data")) data = replaceEmptyArrays(data);
-				config.data = data;
+			const formData = toRequestFormData(config.data);
+			if (!formData) return config;
+			if (!formData.has("action")) {
+				formData.append("action", actionPath);
+				config.url = "";
 			}
+			setFormDataValue(formData, csrf.csrfTokenName, csrf.csrfTokenValue);
+			/** NOTE: FormData cannot represent empty arrays. If you need to send empty arrays as values,
+			* add a placeholder value (e.g., an empty string or special marker) when building the FormData.
+			* eg, if (myArray.length === 0) formData.append('myArray', '');
+			*/
+			config.data = formData;
 			return config;
 		});
 		http.onResponse(async (response) => {
 			let action = null;
-			if (response.config.data instanceof FormData) action = response.config.data.get("action");
+			if (isFormDataLike(response.config.data)) action = response.config.data.get("action");
 			else if (typeof response.config.data === "object" && response.config.data !== null) action = response.config.data.action;
 			else if (typeof response.config.data === "string") try {
 				action = JSON.parse(response.config.data).action;
