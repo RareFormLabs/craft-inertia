@@ -159,11 +159,7 @@ const appendObjectToFormData = (
 
   if (isRecord(value)) {
     Object.entries(value).forEach(([childKey, childValue]) => {
-      appendObjectToFormData(
-        form,
-        composeFormKey(key, childKey),
-        childValue,
-      );
+      appendObjectToFormData(form, composeFormKey(key, childKey), childValue);
     });
   }
 };
@@ -194,7 +190,9 @@ const toRequestFormData = (data: unknown): FormData | null => {
         return objectToFormData(parsed);
       }
     } catch {
-      return objectToFormData(Object.fromEntries(new URLSearchParams(data).entries()));
+      return objectToFormData(
+        Object.fromEntries(new URLSearchParams(data).entries()),
+      );
     }
 
     return null;
@@ -286,6 +284,21 @@ const readField = (data: any, key: string): any => {
   return undefined;
 };
 
+const shouldRefreshCsrfForData = (data: any): boolean => {
+  const action = readField(data, "action");
+  const requiresFreshCsrf = ["users/login", "users/set-password"];
+
+  if (action && requiresFreshCsrf.includes(action)) {
+    return true;
+  }
+
+  if (action === "users/save-user" && !readField(data, "userId")) {
+    return true;
+  }
+
+  return false;
+};
+
 const configureHttpClient = async () => {
   http.onRequest(async (config) => {
     if (config.method !== "post" && config.method !== "put") {
@@ -332,47 +345,23 @@ const configureHttpClient = async () => {
 
     return config;
   });
+};
 
-  // Add a response interceptor
-  http.onResponse(async (response) => {
-    // Support both FormData and plain object/stringified data
-    let action = null;
-    if (isFormDataLike(response.config.data)) {
-      action = response.config.data.get("action");
-    } else if (
-      typeof response.config.data === "object" &&
-      response.config.data !== null
-    ) {
-      action = response.config.data.action;
-    } else if (typeof response.config.data === "string") {
-      // Try to parse as JSON or URL-encoded
-      try {
-        const parsed = JSON.parse(response.config.data);
-        action = parsed.action;
-      } catch {
-        // Try URLSearchParams
-        const params = new URLSearchParams(response.config.data);
-        action = params.get("action");
-      }
+const configureFinishListener = () => {
+  document.addEventListener("inertia:finish", async (event: Event) => {
+    const visit = (event as CustomEvent).detail?.visit;
+
+    if (!visit || visit.cancelled || visit.interrupted || !visit.completed) {
+      return;
     }
 
-    let shouldRefreshCsrf = false;
-    const requiresFreshCsrf = ["users/login", "users/set-password"];
-
-    if (action && requiresFreshCsrf.includes(action)) {
-      shouldRefreshCsrf = true;
-    } else if (action && action == "users/save-user") {
-      if (!readField(response.config.data, "userId")) {
-        shouldRefreshCsrf = true;
-      }
+    if (!shouldRefreshCsrfForData(visit.data)) {
+      return;
     }
 
-    if (shouldRefreshCsrf) {
-      await getSessionInfo().then((sessionInfo) => {
-        setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
-      });
-    }
-    return response;
+    await getSessionInfo().then((sessionInfo) => {
+      setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
+    });
   });
 };
 
@@ -387,6 +376,7 @@ const checkForHttpClient = async () => {
       http = window.inertiaHttp;
       clearInterval(intervalCheck);
       await configureHttpClient();
+      configureFinishListener();
       console.log("Inertia (Craft): HTTP Client configured successfully.");
       return;
     }

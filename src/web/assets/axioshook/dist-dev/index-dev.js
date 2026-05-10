@@ -158,6 +158,12 @@
 			return new URLSearchParams(data).get(key);
 		}
 	};
+	var shouldRefreshCsrfForData = (data) => {
+		const action = readField(data, "action");
+		if (action && ["users/login", "users/set-password"].includes(action)) return true;
+		if (action === "users/save-user" && !readField(data, "userId")) return true;
+		return false;
+	};
 	var configureHttpClient = async () => {
 		http.onRequest(async (config) => {
 			if (config.method !== "post" && config.method !== "put") return config;
@@ -186,24 +192,15 @@
 			config.data = formData;
 			return config;
 		});
-		http.onResponse(async (response) => {
-			let action = null;
-			if (isFormDataLike(response.config.data)) action = response.config.data.get("action");
-			else if (typeof response.config.data === "object" && response.config.data !== null) action = response.config.data.action;
-			else if (typeof response.config.data === "string") try {
-				action = JSON.parse(response.config.data).action;
-			} catch {
-				action = new URLSearchParams(response.config.data).get("action");
-			}
-			let shouldRefreshCsrf = false;
-			if (action && ["users/login", "users/set-password"].includes(action)) shouldRefreshCsrf = true;
-			else if (action && action == "users/save-user") {
-				if (!readField(response.config.data, "userId")) shouldRefreshCsrf = true;
-			}
-			if (shouldRefreshCsrf) await getSessionInfo().then((sessionInfo) => {
+	};
+	var configureFinishListener = () => {
+		document.addEventListener("inertia:finish", async (event) => {
+			const visit = event.detail?.visit;
+			if (!visit || visit.cancelled || visit.interrupted || !visit.completed) return;
+			if (!shouldRefreshCsrfForData(visit.data)) return;
+			await getSessionInfo().then((sessionInfo) => {
 				setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
 			});
-			return response;
 		});
 	};
 	console.log("Inertia (Craft): Configuring HTTP Client...");
@@ -215,6 +212,7 @@
 				http = window.inertiaHttp;
 				clearInterval(intervalCheck);
 				await configureHttpClient();
+				configureFinishListener();
 				console.log("Inertia (Craft): HTTP Client configured successfully.");
 				return;
 			}
