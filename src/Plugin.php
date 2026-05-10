@@ -23,10 +23,10 @@ class Plugin extends BasePlugin
     public static function config(): array
     {
         return [
-            'components' => [
-                'renderer' => \rareform\inertia\services\Renderer::class,
-                'errorHandler' => \rareform\inertia\services\ErrorHandler::class,
-                'pageResolver' => \rareform\inertia\services\PageResolver::class,
+            "components" => [
+                "renderer" => \rareform\inertia\services\Renderer::class,
+                "errorHandler" => \rareform\inertia\services\ErrorHandler::class,
+                "pageResolver" => \rareform\inertia\services\PageResolver::class,
             ],
         ];
     }
@@ -41,8 +41,8 @@ class Plugin extends BasePlugin
         $this->attachEventHandlers();
 
         if (Craft::$app->request->isSiteRequest) {
-            Craft::$app->on(Application::EVENT_AFTER_REQUEST, [$this, 'applicationAfterRequestHandler']);
-            Craft::$app->response->on(Response::EVENT_BEFORE_SEND, [$this, 'responseBeforeSendHandler']);
+            Craft::$app->on(Application::EVENT_AFTER_REQUEST, [$this, "applicationAfterRequestHandler"]);
+            Craft::$app->response->on(Response::EVENT_BEFORE_SEND, [$this, "responseBeforeSendHandler"]);
         }
 
         Craft::$app->view->registerTwigExtension(new InertiaExtension());
@@ -56,9 +56,9 @@ class Plugin extends BasePlugin
     public function applicationAfterRequestHandler($event): void
     {
         $response = Craft::$app->getResponse();
-        if ($response->getHeaders()->has('X-Redirect')) {
-            $url = $response->headers->get('X-Redirect', null, true);
-            $response->headers->set('Location', $url);
+        if ($response->getHeaders()->has("X-Redirect")) {
+            $url = $response->headers->get("X-Redirect", null, true);
+            $response->headers->set("Location", $url);
         }
     }
 
@@ -75,7 +75,7 @@ class Plugin extends BasePlugin
         /** @var Response $response */
         $response = $event->sender;
 
-        if (!$request->headers->has('X-Inertia')) {
+        if (!$request->headers->has("X-Inertia")) {
             if ($request->enableCsrfValidation) {
                 $request->getCsrfToken(true);
             }
@@ -85,7 +85,7 @@ class Plugin extends BasePlugin
         if (
             $response->getIsRedirection() &&
             $response->getStatusCode() === 302 &&
-            in_array($request->getMethod(), ['PUT', 'PATCH', 'DELETE'], true)
+            in_array($request->getMethod(), ["PUT", "PATCH", "DELETE"], true)
         ) {
             $response->setStatusCode(303);
         }
@@ -99,7 +99,7 @@ class Plugin extends BasePlugin
     public function getInertiaVersion(): string
     {
         if (!$this->settings->useVersioning) {
-            return '__noversioning__';
+            return "__noversioning__";
         }
 
         $hashes = [];
@@ -107,7 +107,7 @@ class Plugin extends BasePlugin
             $hashes[] = $this->hashDirectory(App::parseEnv($assetDir));
         }
 
-        return md5(implode('', $hashes));
+        return md5(implode("", $hashes));
     }
 
     /**
@@ -120,20 +120,20 @@ class Plugin extends BasePlugin
     {
         $files = [];
         if (!is_dir($directory)) {
-            return '';
+            return "";
         }
         $dir = dir($directory);
         while (($file = $dir->read()) !== false) {
-            if ($file != '.' and $file != '..') {
-                if (is_dir($directory . '/' . $file)) {
-                    $files[] = $this->hashDirectory($directory . '/' . $file);
+            if ($file != "." and $file != "..") {
+                if (is_dir($directory . "/" . $file)) {
+                    $files[] = $this->hashDirectory($directory . "/" . $file);
                 } else {
-                    $files[] = md5_file($directory . '/' . $file);
+                    $files[] = md5_file($directory . "/" . $file);
                 }
             }
         }
         $dir->close();
-        return md5(implode('', $files));
+        return md5(implode("", $files));
     }
 
     /*
@@ -151,7 +151,7 @@ class Plugin extends BasePlugin
 
     public function isCatchallRoutingEnabled(): bool
     {
-        return $this->getRoutingMode() === 'catchall';
+        return $this->getRoutingMode() === "catchall";
     }
 
     public function render(string $component, array $props = []): Response
@@ -161,59 +161,49 @@ class Plugin extends BasePlugin
 
     private function attachEventHandlers(): void
     {
-        Event::on(
-            UrlManager::class,
-            UrlManager::EVENT_REGISTER_SITE_URL_RULES,
-            function (RegisterUrlRulesEvent $event) {
-                foreach ($event->rules as &$rule) {
-                    if (is_array($rule) && !empty($rule['inertia'])) {
-                        $rule['class'] = 'rareform\inertia\web\InertiaUrlRule';
-                    }
-                }
-
-                if ($this->isCatchallRoutingEnabled()) {
-                    $event->rules = array_merge($event->rules, [
-                        '' => 'inertia/base/index',
-                        '<catchall:.+>' => 'inertia/base/index',
-                    ]);
+        Event::on(UrlManager::class, UrlManager::EVENT_REGISTER_SITE_URL_RULES, function (
+            RegisterUrlRulesEvent $event,
+        ) {
+            foreach ($event->rules as &$rule) {
+                if (is_array($rule) && !empty($rule["inertia"])) {
+                    $rule["class"] = "rareform\inertia\web\InertiaUrlRule";
                 }
             }
-        );
+
+            if ($this->isCatchallRoutingEnabled()) {
+                $event->rules = array_merge($event->rules, [
+                    "" => "inertia/base/index",
+                    "<catchall:.+>" => "inertia/base/index",
+                ]);
+            }
+        });
 
         // Catch element routes set in Craft's CP
         // and route them to the Inertia controller
-        Event::on(
-            Element::class,
-            Element::EVENT_SET_ROUTE,
-            function (SetElementRouteEvent $event) {
-                if (!$this->isCatchallRoutingEnabled()) {
-                    return;
-                }
-
-                $element = $event->sender;
-                if (!$element) {
-                    return;
-                }
-
-                $isCraftElement = $element instanceof Entry || $element instanceof Category;
-                if (!$isCraftElement) {
-                    return;
-                }
-
-                $event->route = 'inertia/base/index';
-                $event->handled = true;
+        Event::on(Element::class, Element::EVENT_SET_ROUTE, function (SetElementRouteEvent $event) {
+            if (!$this->isCatchallRoutingEnabled()) {
+                return;
             }
-        );
+
+            $element = $event->sender;
+            if (!$element) {
+                return;
+            }
+
+            $isCraftElement = $element instanceof Entry || $element instanceof Category;
+            if (!$isCraftElement) {
+                return;
+            }
+
+            $event->route = "inertia/base/index";
+            $event->handled = true;
+        });
 
         // After validation, set the current element to be used in the controller
         // so that validation errors can be injected into the template
-        Event::on(
-            Element::class,
-            Element::EVENT_AFTER_VALIDATE,
-            function (Event $event) {
-                $element = $event->sender;
-                Craft::$container->set('currentElement', $element);
-            }
-        );
+        Event::on(Element::class, Element::EVENT_AFTER_VALIDATE, function (Event $event) {
+            $element = $event->sender;
+            Craft::$container->set("currentElement", $element);
+        });
     }
 }

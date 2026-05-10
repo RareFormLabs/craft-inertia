@@ -23,11 +23,11 @@ class AxiosHookAsset extends AssetBundle
         // Use Craft's devMode config to determine environment
         $isDev = Craft::$app->config->general->devMode;
         if ($isDev) {
-            $this->sourcePath = __DIR__ . '/dist-dev';
-            $this->js = ['index-dev.js'];
+            $this->sourcePath = __DIR__ . "/dist-dev";
+            $this->js = ["index-dev.js"];
         } else {
-            $this->sourcePath = __DIR__ . '/dist';
-            $this->js = ['index.js'];
+            $this->sourcePath = __DIR__ . "/dist";
+            $this->js = ["index.js"];
         }
         $this->depends = [];
         $this->css = [];

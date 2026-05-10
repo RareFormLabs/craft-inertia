@@ -1,8 +1,11 @@
-import type { AxiosInstance, AxiosHeaders } from "axios";
+// import type { AxiosInstance, AxiosHeaders } from "axios";
+// import { http } from "@inertiajs/vue3";
+//
+let http = null;
 
 declare global {
   interface Window {
-    axios: any;
+    inertiaHttp: any;
   }
 }
 
@@ -91,7 +94,7 @@ const replaceEmptyArrays = (obj: any, maxDepth = 10, currentDepth = 0): any => {
   }
   if (Array.isArray(obj)) {
     return obj.map((item) =>
-      replaceEmptyArrays(item, maxDepth, currentDepth + 1)
+      replaceEmptyArrays(item, maxDepth, currentDepth + 1),
     );
   } else if (typeof obj === "object" && obj !== null) {
     return Object.fromEntries(
@@ -100,14 +103,14 @@ const replaceEmptyArrays = (obj: any, maxDepth = 10, currentDepth = 0): any => {
         Array.isArray(value) && value.length === 0
           ? ""
           : replaceEmptyArrays(value, maxDepth, currentDepth + 1),
-      ])
+      ]),
     );
   }
   return obj;
 };
 
 const getContentType = (
-  headers: AxiosHeaders | Record<string, any>
+  headers: AxiosHeaders | Record<string, any>,
 ): string | undefined => {
   // AxiosHeaders may have a .get() method, otherwise treat as plain object
   if (typeof (headers as any).get === "function") {
@@ -168,8 +171,9 @@ const readField = (data: any, key: string): any => {
   return undefined;
 };
 
-const configureAxios = async () => {
-  (window.axios as AxiosInstance).interceptors.request.use(async (config) => {
+const configureHttpClient = async () => {
+  http.onRequest(async (config) => {
+    debugger;
     if (config.method !== "post" && config.method !== "put") {
       return config;
     }
@@ -178,7 +182,9 @@ const configureAxios = async () => {
     if (!csrfMeta) {
       // Wait for the session info to be resolved before configuring axios
       sessionInfo = await getSessionInfo();
-      if (!sessionInfo.isGuest) {
+      debugger;
+      if (sessionInfo.isGuest) {
+        debugger;
         setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
         csrfMeta = getTokenFromMeta();
       }
@@ -188,14 +194,14 @@ const configureAxios = async () => {
 
     if (!csrf) {
       throw new Error(
-        "Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present."
+        "Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present.",
       );
     }
 
     const actionPath = getActionPath(config.url ?? "");
 
     if (getContentType(config.headers) == undefined) {
-      config.headers.set("Content-Type", "application/x-www-form-urlencoded");
+      config.headers["Content-Type"] = "application/x-www-form-urlencoded";
     }
 
     if (config.data instanceof FormData) {
@@ -230,59 +236,60 @@ const configureAxios = async () => {
   });
 
   // Add a response interceptor
-  (window.axios as AxiosInstance).interceptors.response.use(
-    async (response) => {
-      // Support both FormData and plain object/stringified data
-      let action = null;
-      if (response.config.data instanceof FormData) {
-        action = response.config.data.get("action");
-      } else if (
-        typeof response.config.data === "object" &&
-        response.config.data !== null
-      ) {
-        action = response.config.data.action;
-      } else if (typeof response.config.data === "string") {
-        // Try to parse as JSON or URL-encoded
-        try {
-          const parsed = JSON.parse(response.config.data);
-          action = parsed.action;
-        } catch {
-          // Try URLSearchParams
-          const params = new URLSearchParams(response.config.data);
-          action = params.get("action");
-        }
+  http.onResponse(async (response) => {
+    // Support both FormData and plain object/stringified data
+    let action = null;
+    if (response.config.data instanceof FormData) {
+      action = response.config.data.get("action");
+    } else if (
+      typeof response.config.data === "object" &&
+      response.config.data !== null
+    ) {
+      action = response.config.data.action;
+    } else if (typeof response.config.data === "string") {
+      // Try to parse as JSON or URL-encoded
+      try {
+        const parsed = JSON.parse(response.config.data);
+        action = parsed.action;
+      } catch {
+        // Try URLSearchParams
+        const params = new URLSearchParams(response.config.data);
+        action = params.get("action");
       }
-
-      let shouldRefreshCsrf = false;
-      const requiresFreshCsrf = ["users/login", "users/set-password"];
-
-      if (action && requiresFreshCsrf.includes(action)) {
-        shouldRefreshCsrf = true;
-      } else if (action && action == "users/save-user") {
-        if (!readField(response.config.data, "userId")) {
-          shouldRefreshCsrf = true;
-        }
-      }
-
-      if (shouldRefreshCsrf) {
-        await getSessionInfo().then((sessionInfo) => {
-          setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
-        });
-      }
-      return response;
     }
-  );
+
+    let shouldRefreshCsrf = false;
+    const requiresFreshCsrf = ["users/login", "users/set-password"];
+
+    if (action && requiresFreshCsrf.includes(action)) {
+      shouldRefreshCsrf = true;
+    } else if (action && action == "users/save-user") {
+      if (!readField(response.config.data, "userId")) {
+        shouldRefreshCsrf = true;
+      }
+    }
+
+    if (shouldRefreshCsrf) {
+      await getSessionInfo().then((sessionInfo) => {
+        setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
+      });
+    }
+    return response;
+  });
 };
 
-const checkForAxios = async () => {
+console.log("Inertia (Craft): Configuring HTTP Client...");
+
+const checkForHttpClient = async () => {
   const MAX_ATTEMPTS = 40; // 10 seconds total (50 * 200ms)
   let attempts = 0;
 
   const intervalCheck = setInterval(async () => {
-    if (window.axios) {
+    if (window.inertiaHttp) {
+      http = window.inertiaHttp;
       clearInterval(intervalCheck);
-      await configureAxios();
-      console.log("Inertia (Craft): Axios configured successfully.");
+      await configureHttpClient();
+      console.log("Inertia (Craft): HTTP Client configured successfully.");
       return;
     }
 
@@ -290,10 +297,10 @@ const checkForAxios = async () => {
     if (attempts >= MAX_ATTEMPTS) {
       clearInterval(intervalCheck);
       console.warn(
-        "Inertia (Craft): Axios not found after 10 seconds. CSRF protection may not be active."
+        "Inertia (Craft): HTTP Client not found after 10 seconds. CSRF protection may not be active.",
       );
     }
   }, 250);
 };
 
-checkForAxios();
+checkForHttpClient();

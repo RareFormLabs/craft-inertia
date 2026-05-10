@@ -1,19 +1,18 @@
 {
   "name": "axioshook",
-  "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "devDependencies": {
+    "npm-run-all2": "^8.0.4",
+    "sane": "^5.0.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.11"
+  },
+  "private": true,
   "scripts": {
     "dev": "sane 'npm run build' src",
     "build": "run-s build:dev build:min --print-label",
     "build:dev": "vite build --config vite.config.dev.ts",
     "build:min": "vite build --config vite.config.min.ts"
   },
-  "devDependencies": {
-    "axios": "^1.8.4",
-    "npm-run-all2": "^8.0.4",
-    "sane": "^5.0.1",
-    "typescript": "~5.7.2",
-    "vite": "^6.2.0"
-  }
+  "type": "module"
 }
