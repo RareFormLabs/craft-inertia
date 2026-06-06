@@ -24,7 +24,13 @@
 	*     - (useForm) form.post("")
 	*/
 	var getActionPath = (url) => {
-		const postPathPathname = new URL(url).pathname;
+		if (!url) return "";
+		let postPathPathname = "";
+		try {
+			postPathPathname = new URL(url, window.location.origin).pathname;
+		} catch {
+			return "";
+		}
 		const locationPathParts = window.location.pathname.split("/");
 		locationPathParts.pop();
 		const newPath = locationPathParts.join("/");
@@ -165,6 +171,7 @@
 		return false;
 	};
 	var configureHttpClient = async () => {
+		if (!http) return;
 		http.onRequest(async (config) => {
 			if (config.method !== "post" && config.method !== "put") return config;
 			let csrfMeta = getTokenFromMeta();
@@ -177,10 +184,10 @@
 			}
 			const csrf = csrfMeta || sessionInfo;
 			if (!csrf) throw new Error("Inertia (Craft): CSRF token not found. Ensure session is initialized or meta tag is present.");
-			const actionPath = getActionPath(config.url ?? "");
 			const formData = toRequestFormData(config.data);
 			if (!formData) return config;
 			if (!formData.has("action")) {
+				const actionPath = getActionPath(config.url ?? "");
 				formData.append("action", actionPath);
 				config.url = "";
 			}

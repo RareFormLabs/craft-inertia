@@ -17,7 +17,7 @@ class BaseController extends Controller
         try {
             $resolvedPage = Inertia::getInstance()->pageResolver->resolveCurrentRequest();
             if ($resolvedPage === null) {
-                return Inertia::getInstance()->errorHandler->renderError(Craft::$app->getRequest(), 404);
+                return Inertia::getInstance()->errorHandler->renderError(404);
             }
 
             return Inertia::getInstance()->renderer->renderTemplateResponse(

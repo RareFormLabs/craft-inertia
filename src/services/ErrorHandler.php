@@ -38,10 +38,10 @@ class ErrorHandler extends Component
             Craft::error('Error processing Inertia template: ' . $exception->getMessage(), __METHOD__);
         }
 
-        return $this->renderError(Craft::$app->getRequest(), $statusCode, $exception);
+        return $this->renderError($statusCode, $exception);
     }
 
-    public function renderError($request, int $statusCode, $exception = null): \craft\web\Response
+    public function renderError(int $statusCode, $exception = null): \craft\web\Response
     {
         $resolvedPage = Inertia::getInstance()->pageResolver->resolveErrorTemplate($statusCode, $exception);
 
@@ -65,8 +65,11 @@ class ErrorHandler extends Component
 
     private function determineStatusCode(\Throwable $exception): int
     {
-        if (method_exists($exception, 'getStatusCode') && $exception->getStatusCode()) {
-            return (int)$exception->getStatusCode();
+        if (method_exists($exception, 'getStatusCode')) {
+            $statusCode = $exception->getStatusCode();
+            if ($statusCode) {
+                return (int)$statusCode;
+            }
         }
 
         $publicProperties = get_object_vars($exception);

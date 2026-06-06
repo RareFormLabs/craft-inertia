@@ -1,7 +1,18 @@
-// import type { AxiosInstance, AxiosHeaders } from "axios";
-// import { http } from "@inertiajs/vue3";
-//
-let http = null;
+type HttpRequestConfig = {
+  data?: unknown;
+  method?: string;
+  url?: string;
+};
+
+type InertiaHttpClient = {
+  onRequest(
+    handler: (
+      config: HttpRequestConfig,
+    ) => HttpRequestConfig | Promise<HttpRequestConfig>,
+  ): void;
+};
+
+let http: InertiaHttpClient | null = null;
 
 declare global {
   interface Window {
@@ -52,9 +63,18 @@ let sessionInfo: SessionInfo | null = null;
  *     - (useForm) form.post("")
  */
 
-const getActionPath = (url: string) => {
-  const postPathObject: URL = new URL(url);
-  const postPathPathname: string = postPathObject.pathname;
+const getActionPath = (url: string): string => {
+  if (!url) {
+    return "";
+  }
+
+  let postPathPathname = "";
+
+  try {
+    postPathPathname = new URL(url, window.location.origin).pathname;
+  } catch {
+    return "";
+  }
 
   // Get window.location.pathname without the last part
   const locationPathParts = window.location.pathname.split("/");
@@ -300,6 +320,10 @@ const shouldRefreshCsrfForData = (data: any): boolean => {
 };
 
 const configureHttpClient = async () => {
+  if (!http) {
+    return;
+  }
+
   http.onRequest(async (config) => {
     if (config.method !== "post" && config.method !== "put") {
       return config;
@@ -323,7 +347,6 @@ const configureHttpClient = async () => {
       );
     }
 
-    const actionPath = getActionPath(config.url ?? "");
     const formData = toRequestFormData(config.data);
 
     if (!formData) {
@@ -331,6 +354,7 @@ const configureHttpClient = async () => {
     }
 
     if (!formData.has("action")) {
+      const actionPath = getActionPath(config.url ?? "");
       formData.append("action", actionPath);
       config.url = "";
     }
@@ -368,7 +392,7 @@ const configureFinishListener = () => {
 console.log("Inertia (Craft): Configuring HTTP Client...");
 
 const checkForHttpClient = async () => {
-  const MAX_ATTEMPTS = 40; // 10 seconds total (50 * 200ms)
+  const MAX_ATTEMPTS = 40; // 10 seconds total (40 * 250ms)
   let attempts = 0;
 
   const intervalCheck = setInterval(async () => {
