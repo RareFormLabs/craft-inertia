@@ -59,7 +59,7 @@ Every page in your javascript application is backed by a Twig template which ret
 {{ page('Posts/Index') }}
 ```
 
-Note: templates are passed element variables (`entry` or `category`) automatically when the route is matched to either element type.
+Note: templates are passed element variables (`entry` or `category`) automatically when the route is matched to either element type. If your page component needs that data, pass it explicitly with `prop()`.
 
 ## PHP Controllers
 
@@ -284,6 +284,7 @@ return [
      * false => 'opt-in'
      */
     'takeoverRouting' => null,
+
 ];
 ```
 

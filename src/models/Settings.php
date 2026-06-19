@@ -56,7 +56,6 @@ class Settings extends Model
 
         return 'opt-in';
     }
-
     protected function defineRules(): array
     {
         return [
