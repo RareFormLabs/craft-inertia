@@ -4,36 +4,22 @@ namespace rareform\inertia\services;
 
 use Craft;
 use craft\base\Component;
-
 use rareform\inertia\Plugin as Inertia;
-
-use Twig\Error\Error as TwigError;
-use Twig\Error\LoaderError as TwigLoaderError;
 use Twig\Error\RuntimeError as TwigRuntimeError;
-use Twig\Error\SyntaxError as TwigSyntaxError;
-
+use yii\web\Response as YiiResponse;
 
 class ErrorHandler extends Component
 {
-    public function handleError($exception): craft\web\Response|string|array
+    public function handleError($exception): \craft\web\Response
     {
-        // If this is a Twig Runtime exception, use the previous one instead
         if ($exception instanceof TwigRuntimeError && ($previousException = $exception->getPrevious()) !== null) {
             $exception = $previousException;
         }
 
-
-        $statusCode = 500;
-        // Check if the exception has a statusCode property or method
-        if ((is_object($exception) && property_exists($exception, 'statusCode') && $exception->statusCode) || (method_exists($exception, 'getStatusCode') && $exception->getStatusCode())) {
-            $statusCode = property_exists($exception, 'statusCode') ? $exception->statusCode : $exception->getStatusCode();
-            if (!Craft::$app->getConfig()->getGeneral()->devMode) {
-                return $this->renderError(Craft::$app->getRequest(), $statusCode, $exception);
-            }
+        $statusCode = $this->determineStatusCode($exception);
+        if (Craft::$app->getConfig()->getGeneral()->devMode) {
             throw $exception;
         }
-
-        Craft::$app->getResponse()->setStatusCode($statusCode);
 
         if ($exception instanceof TwigRuntimeError) {
             $sourceContext = $exception->getSourceContext();
@@ -52,69 +38,62 @@ class ErrorHandler extends Component
             Craft::error('Error processing Inertia template: ' . $exception->getMessage(), __METHOD__);
         }
 
-        throw $exception;
+        return $this->renderError($statusCode, $exception);
     }
 
-    /**
-     * Renders an error template for any status code.
-     *
-     * @param \yii\web\Request $request
-     * @param int $statusCode
-     * @return craft\web\Response|string|array
-     */
-    public function renderError($request, int $statusCode, $exception = null): craft\web\Response|string|array
+    public function renderError(int $statusCode, $exception = null): \craft\web\Response
     {
-        Craft::$app->getResponse()->setStatusCode($statusCode);
-        return $this->errorPageRequest($this->resolveErrorTemplate($request, (string) $statusCode), $exception);
+        $resolvedPage = Inertia::getInstance()->pageResolver->resolveErrorTemplate($statusCode, $exception);
+
+        if ($resolvedPage !== null) {
+            return Inertia::getInstance()->renderer->renderTemplateResponse(
+                $resolvedPage['template'],
+                $resolvedPage['uri'],
+                $resolvedPage['variables'],
+                $statusCode,
+                false
+            );
+        }
+
+        $response = Craft::$app->getResponse();
+        $response->setStatusCode($statusCode);
+        $response->format = YiiResponse::FORMAT_RAW;
+        $response->content = $this->getFallbackErrorContent($statusCode, $exception);
+
+        return $response;
     }
 
-    /**
-     * Determines the correct error template to use for a given error code.
-     *
-     * @param \yii\web\Request $request
-     * @param string $errorCode
-     * @return string
-     */
-    protected function resolveErrorTemplate($request, string $errorCode, $exception = null): string
+    private function determineStatusCode(\Throwable $exception): int
     {
-        $view = Craft::$app->getView();
-        $template = $errorCode;
-        if ($request->getIsSiteRequest()) {
-            $prefix = Craft::$app->getConfig()->getGeneral()->errorTemplatePrefix;
-            if ($view->doesTemplateExist($prefix . $errorCode)) {
-                $template = $prefix . $errorCode;
-            } elseif ($view->doesTemplateExist($prefix . 'error')) {
-                $template = $prefix . 'error';
+        if (method_exists($exception, 'getStatusCode')) {
+            $statusCode = $exception->getStatusCode();
+            if ($statusCode) {
+                return (int)$statusCode;
             }
         }
-        return $template;
+
+        $publicProperties = get_object_vars($exception);
+        if (!empty($publicProperties['statusCode'])) {
+            return (int)$publicProperties['statusCode'];
+        }
+
+        return 500;
     }
 
-    public function errorPageRequest($errorCode, $exception = null): craft\web\Response|string|array
+    private function getFallbackErrorContent(int $statusCode, ?\Throwable $exception): string
     {
-        $templateVariables = [];
-        $requestParams = Craft::$app->getUrlManager()->getRouteParams();
+        $message = $exception?->getMessage();
+        $devMode = Craft::$app->getConfig()->getGeneral()->devMode;
+        $isClientError = $statusCode >= 400 && $statusCode < 500;
 
-        // If the $requestParams contains a 'variables' associative array, move its contents to the top level and remove 'variables'.
-        // Top-level keys take precedence over 'variables' keys; numeric keys are preserved.
-        if (isset($requestParams['variables']) && is_array($requestParams['variables'])) {
-            $requestParams = $requestParams + $requestParams['variables'];
-            unset($requestParams['variables']);
+        if ($devMode && $message) {
+            return $message;
         }
 
-        // If $exception exists and exception->getMessage() exists, add it to templateVariables as 'message'
-        if ($exception && method_exists($exception, 'getMessage')) {
-            $templateVariables['message'] = $exception->getMessage();
+        if ($isClientError) {
+            return $message ?: (YiiResponse::$httpStatuses[$statusCode] ?? (string)$statusCode);
         }
 
-        $templateVariables = array_merge($requestParams, $templateVariables);
-        $inertiaConfiguredDirectory = Inertia::getInstance()->settings->inertiaDirectory ?? null;
-        $inertiaTemplatePath = $inertiaConfiguredDirectory ? $inertiaConfiguredDirectory . '/' . $errorCode : $errorCode;
-
-        if (Craft::$app->getView()->doesTemplateExist($inertiaTemplatePath)) {
-            return Inertia::getInstance()->renderer->handleMatchedTemplate($inertiaTemplatePath, $errorCode, $templateVariables);
-        } else {
-            throw new \yii\web\HttpException(500, 'Error template not found');
-        }
+        return 'An error occurred';
     }
 }

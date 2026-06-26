@@ -2,12 +2,10 @@
 
 namespace rareform\inertia\models;
 
-use Craft;
 use craft\base\Model;
 
 class Settings extends Model
 {
-
     /** The template that will be rendered on first calls.
      *
      *  Includes the div the inertia app will be rendered to:
@@ -18,9 +16,6 @@ class Settings extends Model
      *
      */
     public string $view = 'base.twig';
-
-    /** The key the adapter uses for handling shared props */
-    public string $shareKey = '__inertia__';
 
     /** whether inertia's assets versioning shall be used
      * Set to false if this is already handled in your build process
@@ -33,32 +28,38 @@ class Settings extends Model
     public array $assetsDirs = ['@webroot/assets'];
 
     /**
-     * Whether to inject the element (`entry` or `category`) automatically into the frontend response
-     * @var bool
+     * Whether Inertia routing is opt-in or catchall.
      */
-    public bool $injectElementAsProp = false;
+    public ?string $routingMode = null;
 
     /**
-     * Whether to take over all routing and forward to Inertia
-     * If set to false, you can use Inertia in parallel to normal twig templates
-     * Route rules will need to be set in config/routes.php, eg:
-     * '' => 'inertia/base/index',
-     * '<catchall:.+>' => 'inertia/base/index',
-     * @var bool
+     * Deprecated alias for routingMode.
      */
-    public bool $takeoverRouting = true;
+    public ?bool $takeoverRouting = null;
 
     /**
      * * Currently undocumented
      * The template directory where the Inertia backing logic is stored
      * @var string|null
      */
-    public string|null $inertiaDirectory = null;
+    public ?string $inertiaDirectory = null;
 
-    /**
-     * * Currently undocumented and undeveloped
-     * The path to a Shared backing template
-     * @var string|null
-     */
-    public string|null $sharedPath = null;
+    public function getResolvedRoutingMode(): string
+    {
+        if ($this->routingMode !== null) {
+            return $this->routingMode;
+        }
+
+        if ($this->takeoverRouting !== null) {
+            return $this->takeoverRouting ? 'catchall' : 'opt-in';
+        }
+
+        return 'opt-in';
+    }
+    protected function defineRules(): array
+    {
+        return [
+            [['routingMode'], 'in', 'range' => ['opt-in', 'catchall'], 'skipOnEmpty' => true],
+        ];
+    }
 }

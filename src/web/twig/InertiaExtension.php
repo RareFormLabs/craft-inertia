@@ -31,23 +31,28 @@ class InertiaExtension extends AbstractExtension
      */
     public function prop($name, $value = null)
     {
-        // Output a marker as an HTML comment for controller parsing
         try {
             $jsonValue = Json::encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         } catch (\Throwable $e) {
             throw new \RuntimeException("Failed to encode Inertia prop '$name' as JSON: " . $e->getMessage(), 0, $e);
         }
+
+        if (Craft::$app->has('plugins') && ($plugin = Craft::$app->plugins->getPlugin('inertia')) !== null) {
+            $plugin->renderer->addProp($name, $value);
+        }
+
         return "<!--INERTIA_PROP:{\"$name\":$jsonValue}-->";
     }
 
     public function getFunctions()
     {
         return [
-            // Legacy inertia() function
             new TwigFunction('inertia', function ($page, $props = []) {
-                // Store in global context for controller to pick up
-                Craft::$app->params['inertiaPage'] = $page;
-                Craft::$app->params['inertiaProps'] = $props;
+                if (Craft::$app->has('plugins') && ($plugin = Craft::$app->plugins->getPlugin('inertia')) !== null) {
+                    $plugin->renderer->setPageComponent($page);
+                    $plugin->renderer->mergeProps($props);
+                }
+
                 return Json::encode([
                     'component' => $page,
                     'props' => $props,
@@ -55,15 +60,15 @@ class InertiaExtension extends AbstractExtension
             }, ['is_safe' => ['html']]),
 
             new TwigFunction('page', function ($page) {
-                Craft::$app->params['__inertia_page'] = $page;
+                if (Craft::$app->has('plugins') && ($plugin = Craft::$app->plugins->getPlugin('inertia')) !== null) {
+                    $plugin->renderer->setPageComponent($page);
+                }
                 return '';
             }),
 
             new TwigFunction('bypass', function (bool $download = false) {
-                Craft::$app->params['__inertia_bypass'] = true;
-
-                if ($download) {
-                    Craft::$app->params['__inertia_download'] = true;
+                if (Craft::$app->has('plugins') && ($plugin = Craft::$app->plugins->getPlugin('inertia')) !== null) {
+                    $plugin->renderer->markBypass($download);
                 }
 
                 return '';
