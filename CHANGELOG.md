@@ -1,5 +1,27 @@
 # Release Notes for Inertia
 
+## 2.0.0 - 2025-06-27
+
+### Added
+- Added support for Inertia.js v2 by integrating with Inertia’s HTTP client instead of relying on Axios.
+- Added support for returning Inertia responses directly from PHP controllers via `Inertia::getInstance()->render(...)`.
+- Added a new `routingMode` setting with `opt-in` and `catchall` modes.
+- Added support for organizing shared props in `_shared` templates.
+
+### Changed
+- Changed the recommended routing behavior to explicit opt-in mode, allowing Inertia routes to coexist with normal Craft routing and Twig templates.
+- Improved request/page resolution for explicit Inertia routes, element routes, and error templates.
+- Improved form submission handling for Craft actions, including FormData normalization and automatic CSRF token management.
+- Improved Twig helper handling for `page()`, `prop()`, and `bypass()` responses.
+
+### Deprecated
+- Deprecated `takeoverRouting` in favor of `routingMode`.
+
+### Fixed
+- Fixed redirect responses for non-GET Inertia requests to use `303` status codes where appropriate.
+- Fixed error-page rendering and fallback behavior for 404 and server error responses.
+- Fixed bypass and download response handling for non-Inertia/file-style responses.
+
 ## 1.1.0 - 2025-10-03
 
 - Pass `message` variable in responses when passing them via `exit` twig functions
