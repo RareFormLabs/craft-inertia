@@ -3,7 +3,7 @@
 ## 2.0.0 - 2025-06-27
 
 ### Added
-- Added support for Inertia.js v2 by integrating with Inertia’s HTTP client instead of relying on Axios.
+- Added support for Inertia.js v3 by integrating with Inertia’s HTTP client instead of relying on Axios.
 - Added support for returning Inertia responses directly from PHP controllers via `Inertia::getInstance()->render(...)`.
 - Added a new `routingMode` setting with `opt-in` and `catchall` modes.
 - Added support for organizing shared props in `_shared` templates.
