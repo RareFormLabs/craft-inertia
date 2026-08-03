@@ -315,7 +315,7 @@ SSR is opt-in and follows Inertia's HTTP SSR protocol. The adapter sends the nor
 
 First, replace the hand-written app element in your root template with the Twig helpers:
 
-~~~twig
+```twig
 <!doctype html>
 <html>
   <head>
@@ -326,7 +326,7 @@ First, replace the hand-written app element in your root template with the Twig 
     {{ inertia_app() }}
   </body>
 </html>
-~~~
+```
 
 The inertia_app() helper also renders the existing client-side app element and escaped page payload whenever SSR is disabled or unavailable, so the same template supports both SSR and client rendering.
 
