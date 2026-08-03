@@ -27,6 +27,7 @@ class Plugin extends BasePlugin
                 "renderer" => \rareform\inertia\services\Renderer::class,
                 "errorHandler" => \rareform\inertia\services\ErrorHandler::class,
                 "pageResolver" => \rareform\inertia\services\PageResolver::class,
+                "ssrGateway" => \rareform\inertia\services\SsrGateway::class,
             ],
         ];
     }
