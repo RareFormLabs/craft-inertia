@@ -9,14 +9,19 @@ use craft\web\View;
 use craft\elements\Entry;
 use craft\elements\Category;
 use rareform\inertia\models\InertiaPage;
+use rareform\inertia\models\SsrResponse;
 use rareform\inertia\Plugin as Inertia;
 use rareform\inertia\helpers\InertiaHelper;
 use rareform\inertia\web\assets\axioshook\AxiosHookAsset;
 use yii\helpers\FileHelper;
+use yii\helpers\Html;
+use yii\helpers\Json;
 
 class Renderer extends Component
 {
     private array $captureStack = [];
+    private ?array $rootPagePayload = null;
+    private ?SsrResponse $ssrResponse = null;
 
     public function setPageComponent(string $component): void
     {
@@ -123,12 +128,41 @@ class Renderer extends Component
         $view = Craft::$app->getView();
         $view->registerAssetBundle(AxiosHookAsset::class, View::POS_END);
 
+        $this->rootPagePayload = $payload;
+        $this->ssrResponse = $request->getMethod() === 'GET'
+            ? Inertia::getInstance()->ssrGateway->dispatch($payload)
+            : null;
+
         $response->format = Response::FORMAT_RAW;
         $response->content = $view->renderPageTemplate($this->resolveRootView($page->rootView), [
             "page" => $payload,
         ]);
 
         return $response;
+    }
+
+    public function renderInertiaHead(): string
+    {
+        return $this->ssrResponse?->head ?? '';
+    }
+
+    public function renderInertiaApp(): string
+    {
+        if ($this->ssrResponse !== null) {
+            return $this->ssrResponse->body;
+        }
+
+        if ($this->rootPagePayload === null) {
+            return '';
+        }
+
+        return Html::tag('div', '', [
+            'id' => 'app',
+            'data-page' => Json::encode(
+                $this->rootPagePayload,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            ),
+        ]);
     }
 
     public function getInertiaProps(string $component, array $params = []): array

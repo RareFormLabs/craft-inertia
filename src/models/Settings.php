@@ -6,13 +6,10 @@ use craft\base\Model;
 
 class Settings extends Model
 {
-    /** The template that will be rendered on first calls.
+    /** The template that will be rendered on initial requests.
      *
-     *  Includes the div the inertia app will be rendered to:
-     *  <div id="app" data-page="{{ page|json_encode }}"></div>
-     *
-     * and calls the inertia js app
-     * <script src="<path_to_app>/app.js"></script>
+     * Includes the inertia_head() and inertia_app() Twig helpers,
+     * plus the application's client-side assets.
      *
      */
     public string $view = 'base.twig';
@@ -26,6 +23,27 @@ class Settings extends Model
      *  Supports environment variables and aliases.
      */
     public array $assetsDirs = ['@webroot/assets'];
+
+    /**
+     * Whether initial GET requests should be rendered by an Inertia SSR server.
+     */
+    public bool $ssrEnabled = false;
+
+    /**
+     * Base URL for the Inertia SSR server.
+     * Supports environment variables.
+     */
+    public string $ssrUrl = 'http://127.0.0.1:13714';
+
+    /**
+     * Maximum number of seconds to wait for the SSR server.
+     */
+    public float $ssrTimeout = 2.0;
+
+    /**
+     * Throw SSR errors instead of gracefully falling back to client rendering.
+     */
+    public bool $ssrThrowOnError = false;
 
     /**
      * Whether Inertia routing is opt-in or catchall.
@@ -60,6 +78,8 @@ class Settings extends Model
     {
         return [
             [['routingMode'], 'in', 'range' => ['opt-in', 'catchall'], 'skipOnEmpty' => true],
+            [['ssrUrl'], 'string'],
+            [['ssrTimeout'], 'number', 'min' => 0.1],
         ];
     }
 }

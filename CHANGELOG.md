@@ -1,5 +1,11 @@
 # Release Notes for Inertia
 
+## Unreleased
+
+### Added
+- Added opt-in server-side rendering through an Inertia HTTP SSR server.
+- Added inertia_head() and inertia_app() Twig helpers with automatic client-rendering fallback.
+
 ## 2.0.0 - 2025-06-27
 
 ### Added

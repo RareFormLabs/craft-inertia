@@ -76,6 +76,22 @@ class InertiaExtension extends AbstractExtension
 
             new TwigFunction('prop', [$this, 'prop'], ['is_safe' => ['html']]),
 
+            new TwigFunction('inertia_head', function () {
+                if (Craft::$app->has('plugins') && ($plugin = Craft::$app->plugins->getPlugin('inertia')) !== null) {
+                    return $plugin->renderer->renderInertiaHead();
+                }
+
+                return '';
+            }, ['is_safe' => ['html']]),
+
+            new TwigFunction('inertia_app', function () {
+                if (Craft::$app->has('plugins') && ($plugin = Craft::$app->plugins->getPlugin('inertia')) !== null) {
+                    return $plugin->renderer->renderInertiaApp();
+                }
+
+                return '';
+            }, ['is_safe' => ['html']]),
+
             new TwigFunction('prune', [$this, 'pruneDataFilter']),
         ];
     }
