@@ -79,7 +79,7 @@ class Settings extends Model
         return [
             [['routingMode'], 'in', 'range' => ['opt-in', 'catchall'], 'skipOnEmpty' => true],
             [['ssrUrl'], 'string'],
-            [['ssrTimeout'], 'number', 'min' => 0.1],
+            [['ssrTimeout'], 'number', 'min' => 0.1, 'max' => 30],
         ];
     }
 }
