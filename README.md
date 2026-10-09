@@ -241,6 +241,8 @@ This looks much better. You can optionally reduce one extra step the helper take
 
 This extra step reduces additional fetch requests to Craft's sessions endpoint to get the CSRF token manually for unauthenticated users.
 
+Either way, the helper updates the token from the `X-Craft-Csrf-Token` header Craft sends with every Inertia response, so it stays valid after logging in or out without a full page load.
+
 ## Configuration
 
 Create an `inertia.php` file in your Craft `/config` directory. Shown are the default values:

@@ -1,5 +1,10 @@
 # Release Notes for Inertia
 
+## Unreleased
+
+### Fixed
+- Fixed form submissions failing with “Unable to verify your data submission” after logging out without a full page load. Inertia responses now include the session’s current CSRF token in `X-Craft-Csrf-Token` and `X-Craft-Csrf-Token-Name` headers, and the adapter’s helper keeps its token in sync with them.
+
 ## 2.0.0 - 2025-06-27
 
 ### Added

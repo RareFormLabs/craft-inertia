@@ -82,6 +82,14 @@ class Plugin extends BasePlugin
             return;
         }
 
+        // Send the session's current CSRF token so the client can replace a token that logging in or out
+        // has invalidated. Prefetches are skipped, as one that finishes after a login or logout would
+        // carry the previous session's token.
+        if ($request->enableCsrfValidation && $request->headers->get("Purpose") !== "prefetch") {
+            $response->headers->set("X-Craft-Csrf-Token-Name", $request->csrfParam);
+            $response->headers->set("X-Craft-Csrf-Token", $request->getCsrfToken());
+        }
+
         if (
             $response->getIsRedirection() &&
             $response->getStatusCode() === 302 &&
