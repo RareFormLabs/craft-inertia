@@ -7,5 +7,4 @@
 /vendor
 /bootstrap.php
 /craft
-/composer.lock
 /.vscode

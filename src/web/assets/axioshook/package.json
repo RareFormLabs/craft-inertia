@@ -12,7 +12,8 @@
     "dev": "sane 'npm run build' src",
     "build": "run-s build:dev build:min --print-label",
     "build:dev": "vite build --config vite.config.dev.ts",
-    "build:min": "vite build --config vite.config.min.ts"
+    "build:min": "vite build --config vite.config.min.ts",
+    "typecheck": "tsc --noEmit"
   },
   "type": "module"
 }

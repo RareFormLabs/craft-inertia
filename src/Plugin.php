@@ -3,9 +3,9 @@
 namespace rareform\inertia;
 
 use Craft;
+use craft\base\Element;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
-use craft\base\Element;
 use craft\elements\Category;
 use craft\elements\Entry;
 use craft\events\RegisterUrlRulesEvent;
@@ -173,7 +173,7 @@ class Plugin extends BasePlugin
 
     private function attachEventHandlers(): void
     {
-        Event::on(UrlManager::class, UrlManager::EVENT_REGISTER_SITE_URL_RULES, function (
+        Event::on(UrlManager::class, UrlManager::EVENT_REGISTER_SITE_URL_RULES, function(
             RegisterUrlRulesEvent $event,
         ) {
             foreach ($event->rules as &$rule) {
@@ -192,7 +192,7 @@ class Plugin extends BasePlugin
 
         // Catch element routes set in Craft's CP
         // and route them to the Inertia controller
-        Event::on(Element::class, Element::EVENT_SET_ROUTE, function (SetElementRouteEvent $event) {
+        Event::on(Element::class, Element::EVENT_SET_ROUTE, function(SetElementRouteEvent $event) {
             if (!$this->isCatchallRoutingEnabled()) {
                 return;
             }
@@ -213,7 +213,7 @@ class Plugin extends BasePlugin
 
         // After validation, set the current element to be used in the controller
         // so that validation errors can be injected into the template
-        Event::on(Element::class, Element::EVENT_AFTER_VALIDATE, function (Event $event) {
+        Event::on(Element::class, Element::EVENT_AFTER_VALIDATE, function(Event $event) {
             $element = $event->sender;
             Craft::$container->set("currentElement", $element);
         });

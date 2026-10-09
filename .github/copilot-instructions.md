@@ -35,6 +35,8 @@
   // ...
   form.post("entries/save-entry");
   ```
+- **Checks:** `composer check-cs` (`composer fix-cs` to fix), `composer phpstan`, and in `src/web/assets/axioshook`, `bun run typecheck` and `bun run build`. Commit the rebuilt `dist/` and `dist-dev/` files; CI fails if they're out of date.
+- **Releases:** Handled by release-please. PR titles must be Conventional Commits (`feat:` → Added, `fix:` → Fixed) because squash merges use the title as the commit message and it becomes the changelog entry. Don't edit `CHANGELOG.md` by hand; merge the release PR to tag and publish.
 - **Troubleshooting:**
   - Ensure only one Axios instance is used (see README for Vite/alias tips).
   - HTTP 400 errors usually mean CSRF or action param is missing.

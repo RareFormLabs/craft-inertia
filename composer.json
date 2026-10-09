@@ -9,12 +9,20 @@
     "rareform/craft-prune": "^0.4.1"
   },
   "require-dev": {
-    "craftcms/generator": "^2.1"
+    "craftcms/ecs": "dev-main",
+    "craftcms/generator": "^2.1",
+    "craftcms/phpstan": "dev-main",
+    "phpstan/phpstan": "^1.12"
   },
   "autoload": {
     "psr-4": {
       "rareform\\inertia\\": "src/"
     }
+  },
+  "scripts": {
+    "check-cs": "ecs check --ansi",
+    "fix-cs": "ecs check --ansi --fix",
+    "phpstan": "phpstan --memory-limit=1G"
   },
   "extra": {
     "handle": "inertia",

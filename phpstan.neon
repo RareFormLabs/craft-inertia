@@ -1,0 +1,8 @@
+includes:
+    - vendor/craftcms/phpstan/phpstan.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 4
+    paths:
+        - src

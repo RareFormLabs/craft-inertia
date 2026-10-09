@@ -2,7 +2,6 @@
 
 namespace rareform\inertia\controllers;
 
-use Craft;
 use craft\web\Controller;
 use craft\web\Response;
 use rareform\inertia\Plugin as Inertia;
