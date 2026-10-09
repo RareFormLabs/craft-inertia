@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: check out repo
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: setup php
         uses: shivammathur/setup-php@v2
@@ -50,6 +52,8 @@ jobs:
     steps:
       - name: check out repo
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: setup bun
         uses: oven-sh/setup-bun@v2

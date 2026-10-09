@@ -3,7 +3,7 @@ name: pr title
 # Squash merges use the PR title as the commit message, and release-please
 # reads those commit messages to build the changelog.
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, edited, reopened, synchronize]
 
 permissions:

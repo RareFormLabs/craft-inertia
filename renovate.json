@@ -12,7 +12,7 @@
   "packageRules": [
     {
       "description": "Auto-merge low-risk dependency updates after they have aged for a week and CI is green.",
-      "matchUpdateTypes": ["minor", "patch", "lockFileMaintenance"],
+      "matchUpdateTypes": ["minor", "patch"],
       "minimumReleaseAge": "7 days",
       "automerge": true
     },
