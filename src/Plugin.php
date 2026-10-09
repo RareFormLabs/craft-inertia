@@ -82,6 +82,18 @@ class Plugin extends BasePlugin
             return;
         }
 
+        // Send the session's current CSRF token so the client can replace a token that logging in or out
+        // has invalidated. The request's start time lets the client ignore a slower, older request's
+        // token, which may belong to the previous session. Prefetches are skipped for the same reason.
+        if ($request->enableCsrfValidation && $request->headers->get("Purpose") !== "prefetch") {
+            $response->headers->set("X-Craft-Csrf-Token-Name", $request->csrfParam);
+            $response->headers->set("X-Craft-Csrf-Token", $request->getCsrfToken());
+            $response->headers->set(
+                "X-Craft-Csrf-Token-Time",
+                sprintf("%.6F", $_SERVER["REQUEST_TIME_FLOAT"] ?? microtime(true)),
+            );
+        }
+
         if (
             $response->getIsRedirection() &&
             $response->getStatusCode() === 302 &&

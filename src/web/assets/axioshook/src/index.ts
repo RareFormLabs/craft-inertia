@@ -4,12 +4,20 @@ type HttpRequestConfig = {
   url?: string;
 };
 
+type HttpResponse = {
+  headers?: Record<string, string> | { get(name: string): unknown };
+};
+
 type InertiaHttpClient = {
   onRequest(
     handler: (
       config: HttpRequestConfig,
     ) => HttpRequestConfig | Promise<HttpRequestConfig>,
   ): void;
+  onResponse(
+    handler: (response: HttpResponse) => HttpResponse | Promise<HttpResponse>,
+  ): void;
+  onError(handler: (error: { response?: HttpResponse }) => void): void;
 };
 
 let http: InertiaHttpClient | null = null;
@@ -276,47 +284,53 @@ const setCsrfOnMeta = (csrfTokenName: string, csrfTokenValue: string): void => {
 };
 
 /**
- * Reads a field value from various data types (FormData, object, JSON string, URLSearchParams)
- * @param data The data to read from
- * @param key The field name
- * @returns The value if found, otherwise undefined
+ * Reads a header from a response, whether its headers are a plain object with
+ * lowercase keys (Inertia's XHR client) or have a get() method (Axios).
  */
-const readField = (data: any, key: string): any => {
-  if (isFormDataLike(data)) {
-    return data.get(key);
+const readHeader = (response: HttpResponse | undefined, name: string) => {
+  const headers = response?.headers;
+  if (!headers) {
+    return null;
   }
-  if (typeof data === "object" && data !== null) {
-    return data[key];
-  }
-  if (typeof data === "string") {
-    // Try JSON parse
-    try {
-      const parsed = JSON.parse(data);
-      if (typeof parsed === "object" && parsed !== null) {
-        return parsed[key];
-      }
-    } catch {
-      // Not JSON, try URLSearchParams
-      const params = new URLSearchParams(data);
-      return params.get(key);
-    }
-  }
-  return undefined;
+
+  const value =
+    typeof headers.get === "function"
+      ? headers.get(name)
+      : (headers as Record<string, string>)[name.toLowerCase()];
+
+  return typeof value === "string" && value !== "" ? value : null;
 };
 
-const shouldRefreshCsrfForData = (data: any): boolean => {
-  const action = readField(data, "action");
-  const requiresFreshCsrf = ["users/login", "users/set-password"];
+// When Craft started handling the request whose token is in the meta tag
+let latestCsrfTokenTime = -Infinity;
 
-  if (action && requiresFreshCsrf.includes(action)) {
-    return true;
+/**
+ * Craft sends the session's current CSRF token with every Inertia response.
+ * Keeping the meta tag in sync with it means a token invalidated by logging in
+ * or out is never sent with a later submission.
+ *
+ * Requests can finish out of order (e.g. a poll or async visit that started
+ * before logging out), so a token from a request Craft started earlier than the
+ * current token's is ignored; it may belong to the previous session.
+ */
+const updateCsrfFromResponse = (response: HttpResponse | undefined): void => {
+  const tokenName = readHeader(response, "X-Craft-Csrf-Token-Name");
+  const tokenValue = readHeader(response, "X-Craft-Csrf-Token");
+  if (!tokenName || !tokenValue) {
+    return;
   }
 
-  if (action === "users/save-user" && !readField(data, "userId")) {
-    return true;
+  const tokenTime = Number(
+    readHeader(response, "X-Craft-Csrf-Token-Time") ?? Number.NaN,
+  );
+  if (Number.isFinite(tokenTime)) {
+    if (tokenTime < latestCsrfTokenTime) {
+      return;
+    }
+    latestCsrfTokenTime = tokenTime;
   }
 
-  return false;
+  setCsrfOnMeta(tokenName, tokenValue);
 };
 
 const configureHttpClient = async () => {
@@ -371,21 +385,19 @@ const configureHttpClient = async () => {
   });
 };
 
-const configureFinishListener = () => {
-  document.addEventListener("inertia:finish", async (event: Event) => {
-    const visit = (event as CustomEvent).detail?.visit;
+const configureResponseHandlers = () => {
+  if (!http) {
+    return;
+  }
 
-    if (!visit || visit.cancelled || visit.interrupted || !visit.completed) {
-      return;
-    }
+  http.onResponse((response) => {
+    updateCsrfFromResponse(response);
+    return response;
+  });
 
-    if (!shouldRefreshCsrfForData(visit.data)) {
-      return;
-    }
-
-    await getSessionInfo().then((sessionInfo) => {
-      setCsrfOnMeta(sessionInfo.csrfTokenName, sessionInfo.csrfTokenValue);
-    });
+  // A rejected submission (e.g. an expired token) still carries a fresh token.
+  http.onError((error) => {
+    updateCsrfFromResponse(error.response);
   });
 };
 
@@ -400,7 +412,7 @@ const checkForHttpClient = async () => {
       http = window.inertiaHttp;
       clearInterval(intervalCheck);
       await configureHttpClient();
-      configureFinishListener();
+      configureResponseHandlers();
       console.log("Inertia (Craft): HTTP Client configured successfully.");
       return;
     }
