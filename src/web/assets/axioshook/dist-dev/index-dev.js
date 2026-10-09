@@ -158,15 +158,26 @@
 		const value = typeof headers.get === "function" ? headers.get(name) : headers[name.toLowerCase()];
 		return typeof value === "string" && value !== "" ? value : null;
 	};
+	var latestCsrfTokenTime = -Infinity;
 	/**
 	* Craft sends the session's current CSRF token with every Inertia response.
 	* Keeping the meta tag in sync with it means a token invalidated by logging in
 	* or out is never sent with a later submission.
+	*
+	* Requests can finish out of order (e.g. a poll or async visit that started
+	* before logging out), so a token from a request Craft started earlier than the
+	* current token's is ignored; it may belong to the previous session.
 	*/
 	var updateCsrfFromResponse = (response) => {
 		const tokenName = readHeader(response, "X-Craft-Csrf-Token-Name");
 		const tokenValue = readHeader(response, "X-Craft-Csrf-Token");
-		if (tokenName && tokenValue) setCsrfOnMeta(tokenName, tokenValue);
+		if (!tokenName || !tokenValue) return;
+		const tokenTime = Number(readHeader(response, "X-Craft-Csrf-Token-Time") ?? NaN);
+		if (Number.isFinite(tokenTime)) {
+			if (tokenTime < latestCsrfTokenTime) return;
+			latestCsrfTokenTime = tokenTime;
+		}
+		setCsrfOnMeta(tokenName, tokenValue);
 	};
 	var configureHttpClient = async () => {
 		if (!http) return;

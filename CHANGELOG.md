@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Fixed
-- Fixed form submissions failing with “Unable to verify your data submission” after logging out without a full page load. Inertia responses now include the session’s current CSRF token in `X-Craft-Csrf-Token` and `X-Craft-Csrf-Token-Name` headers, and the adapter’s helper keeps its token in sync with them.
+- Fixed form submissions failing with “Unable to verify your data submission” after logging out without a full page load. Inertia responses now include the session’s current CSRF token in `X-Craft-Csrf-Token` and `X-Craft-Csrf-Token-Name` headers, and the adapter’s helper keeps its token in sync with them, ignoring tokens from requests that Craft started before the current token’s (`X-Craft-Csrf-Token-Time`).
 
 ## 2.0.0 - 2025-06-27
 
