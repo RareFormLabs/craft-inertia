@@ -1,5 +1,12 @@
 # Release Notes for Inertia
 
+## [2.0.1](https://github.com/RareFormLabs/craft-inertia/compare/2.0.0...2.0.1) (2026-10-09)
+
+
+### Fixed
+
+* keep the CSRF token in sync after logging in or out without a full page load ([68f2f5f](https://github.com/RareFormLabs/craft-inertia/commit/68f2f5f3a7056ec9e87b785a6f33680541329b23))
+
 ## 2.0.0 - 2026-06-27
 
 ### Added
