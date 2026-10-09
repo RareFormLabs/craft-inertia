@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: "php"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: check out repo
+        uses: actions/checkout@v7
+
+      - name: setup php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: validate composer.json
+        run: composer validate
+
+      - name: install composer dependencies
+        uses: ramsey/composer-install@v4
+
+      - name: check coding standards
+        run: composer check-cs
+
+      - name: run static analysis
+        run: composer phpstan
+
+  assets:
+    name: "assets"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/web/assets/axioshook
+
+    steps:
+      - name: check out repo
+        uses: actions/checkout@v7
+
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: run type checks
+        run: bun run typecheck
+
+      - name: build
+        run: bun run build
+
+      - name: check committed build is up to date
+        run: git diff --exit-code -- dist dist-dev || (echo "::error::Built assets are out of date. Run 'bun run build' in src/web/assets/axioshook and commit the result." && exit 1)

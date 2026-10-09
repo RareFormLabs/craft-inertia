@@ -1,0 +1,76 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$renderer\\.$#"
+			count: 1
+			path: src/Plugin.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$settings\\.$#"
+			count: 3
+			path: src/Plugin.php
+
+		-
+			message: "#^Method rareform\\\\inertia\\\\Plugin\\:\\:hashDirectory\\(\\) never returns bool so it can be removed from the return type\\.$#"
+			count: 1
+			path: src/Plugin.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$errorHandler\\.$#"
+			count: 3
+			path: src/controllers/BaseController.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$pageResolver\\.$#"
+			count: 1
+			path: src/controllers/BaseController.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$renderer\\.$#"
+			count: 1
+			path: src/controllers/BaseController.php
+
+		-
+			message: "#^Method rareform\\\\inertia\\\\controllers\\\\BaseController\\:\\:render\\(\\) should return array\\|craft\\\\web\\\\Response\\|string but returns yii\\\\web\\\\Response\\.$#"
+			count: 1
+			path: src/controllers/BaseController.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between array\\<non\\-empty\\-string, string\\> and false will always evaluate to false\\.$#"
+			count: 1
+			path: src/helpers/InertiaHelper.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$pageResolver\\.$#"
+			count: 1
+			path: src/services/ErrorHandler.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$renderer\\.$#"
+			count: 1
+			path: src/services/ErrorHandler.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$settings\\.$#"
+			count: 2
+			path: src/services/PageResolver.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$errorHandler\\.$#"
+			count: 2
+			path: src/services/Renderer.php
+
+		-
+			message: "#^Access to an undefined property rareform\\\\inertia\\\\Plugin\\:\\:\\$settings\\.$#"
+			count: 3
+			path: src/services/Renderer.php
+
+		-
+			message: "#^Offset 1 on array\\{string, '', non\\-empty\\-string\\}\\|array\\{string, non\\-empty\\-string\\} in isset\\(\\) always exists and is not nullable\\.$#"
+			count: 1
+			path: src/services/Renderer.php
+
+		-
+			message: "#^Access to an undefined property craft\\\\base\\\\PluginInterface\\:\\:\\$renderer\\.$#"
+			count: 5
+			path: src/web/twig/InertiaExtension.php

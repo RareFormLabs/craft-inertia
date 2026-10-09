@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommits", "group:recommended"],
+  "labels": ["dependencies"],
+  "schedule": ["at any time"],
+  "prConcurrentLimit": 10,
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge low-risk dependency updates after they have aged for a week and CI is green.",
+      "matchUpdateTypes": ["minor", "patch", "lockFileMaintenance"],
+      "minimumReleaseAge": "7 days",
+      "automerge": true
+    },
+    {
+      "description": "Do not modify the PHP and Craft CMS requirements (plugin compatibility).",
+      "matchManagers": ["composer"],
+      "matchPackageNames": ["php", "craftcms/cms"],
+      "enabled": false
+    }
+  ]
+}

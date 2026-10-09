@@ -4,12 +4,16 @@
 .gitignore export-ignore
 CHANGELOG.md export-ignore
 README.md export-ignore
+release-please-config.json export-ignore
+.release-please-manifest.json export-ignore
+renovate.json export-ignore
 SECURITY.md export-ignore
 composer.lock export-ignore
 ecs.php export-ignore
 package-lock.json export-ignore
 package.json export-ignore
 phpstan.neon export-ignore
+phpstan-baseline.neon export-ignore
 stubs/ export-ignore
 tests/ export-ignore
 
