@@ -3,8 +3,8 @@
 namespace rareform\inertia\helpers;
 
 use Craft;
-use JsonException;
 use Illuminate\Support\Arr;
+use JsonException;
 
 class InertiaHelper
 {

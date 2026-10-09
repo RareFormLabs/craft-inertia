@@ -10,23 +10,23 @@ use craft\web\UrlRule as CraftUrlRule;
  */
 class InertiaUrlRule extends CraftUrlRule
 {
-  public function __construct(array $config = [])
-  {
-    // If 'inertia' is set and true, rewrite the route to the Inertia controller
-    if (isset($config['inertia']) && $config['inertia'] === true) {
-      // Remove 'inertia' from config
-      unset($config['inertia']);
+    public function __construct(array $config = [])
+    {
+        // If 'inertia' is set and true, rewrite the route to the Inertia controller
+        if (isset($config['inertia']) && $config['inertia'] === true) {
+            // Remove 'inertia' from config
+            unset($config['inertia']);
 
-      $config['defaults'] = array_merge(
-        $config['defaults'] ?? [],
-        ['inertiaTemplate' => $config['template'] ?? null]
-      );
+            $config['defaults'] = array_merge(
+                $config['defaults'] ?? [],
+                ['inertiaTemplate' => $config['template'] ?? null]
+            );
 
-      unset($config['template']);
-      // Set the route to the Inertia controller
-      $config['route'] = 'inertia/base/index';
+            unset($config['template']);
+            // Set the route to the Inertia controller
+            $config['route'] = 'inertia/base/index';
+        }
+
+        parent::__construct($config);
     }
-
-    parent::__construct($config);
-  }
 }

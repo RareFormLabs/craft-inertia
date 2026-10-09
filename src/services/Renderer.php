@@ -4,13 +4,13 @@ namespace rareform\inertia\services;
 
 use Craft;
 use craft\base\Component;
+use craft\elements\Category;
+use craft\elements\Entry;
 use craft\web\Response;
 use craft\web\View;
-use craft\elements\Entry;
-use craft\elements\Category;
+use rareform\inertia\helpers\InertiaHelper;
 use rareform\inertia\models\InertiaPage;
 use rareform\inertia\Plugin as Inertia;
-use rareform\inertia\helpers\InertiaHelper;
 use rareform\inertia\web\assets\axioshook\AxiosHookAsset;
 use yii\helpers\FileHelper;
 
@@ -223,7 +223,7 @@ class Renderer extends Component
 
             $processedContent = preg_replace_callback(
                 $pattern,
-                function ($matches) use ($view) {
+                function($matches) use ($view) {
                     $pullPath = isset($matches[1]) && $matches[1] !== "" ? trim($matches[1]) : trim($matches[2]);
                     $directPath = trim($pullPath, "'\"");
                     $referencedPath = $view->resolveTemplate($directPath);
