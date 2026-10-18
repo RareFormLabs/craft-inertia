@@ -22,7 +22,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "rareform\inertia\tests\": "tests/"
+      "rareform\\inertia\\tests\\": "tests/"
     }
   },
   "scripts": {

@@ -4,6 +4,7 @@ namespace rareform\inertia\web\twig;
 
 use Craft;
 use craft\helpers\Json;
+use rareform\inertia\Plugin as Inertia;
 use rareform\Prune;
 use Twig\Error\RuntimeError;
 use Twig\Extension\AbstractExtension;
@@ -75,21 +76,17 @@ class InertiaExtension extends AbstractExtension
 
             new TwigFunction('prop', [$this, 'prop'], ['is_safe' => ['html']]),
 
-            new TwigFunction('inertia_head', function () {
-                if (Craft::$app->has('plugins') && ($plugin = Craft::$app->plugins->getPlugin('inertia')) !== null) {
-                    return $plugin->renderer->renderInertiaHead();
-                }
+            new TwigFunction(
+                'inertia_head',
+                fn() => Inertia::getInstance()?->renderer->renderInertiaHead() ?? '',
+                ['is_safe' => ['html']],
+            ),
 
-                return '';
-            }, ['is_safe' => ['html']]),
-
-            new TwigFunction('inertia_app', function () {
-                if (Craft::$app->has('plugins') && ($plugin = Craft::$app->plugins->getPlugin('inertia')) !== null) {
-                    return $plugin->renderer->renderInertiaApp();
-                }
-
-                return '';
-            }, ['is_safe' => ['html']]),
+            new TwigFunction(
+                'inertia_app',
+                fn(string $id = 'app') => Inertia::getInstance()?->renderer->renderInertiaApp($id) ?? '',
+                ['is_safe' => ['html']],
+            ),
 
             new TwigFunction('prune', [$this, 'pruneDataFilter']),
         ];

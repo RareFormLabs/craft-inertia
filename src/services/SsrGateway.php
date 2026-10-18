@@ -71,9 +71,13 @@ class SsrGateway extends Component
 
     public function getRenderUrl(Settings $settings): ?string
     {
-        $baseUrl = trim((string)App::parseEnv($settings->ssrUrl));
+        $baseUrl = rtrim(trim((string)App::parseEnv($settings->ssrUrl)), '/');
 
-        return $baseUrl === '' ? null : rtrim($baseUrl, '/') . '/render';
+        if ($baseUrl === '') {
+            return null;
+        }
+
+        return str_ends_with($baseUrl, '/render') ? $baseUrl : $baseUrl . '/render';
     }
 
     /**
@@ -136,7 +140,7 @@ class SsrGateway extends Component
         string $message,
         Settings $settings,
         ?Throwable $previous = null,
-    ): ?SsrResponse {
+    ): null {
         $component = is_string($page['component'] ?? null) ? $page['component'] : 'unknown';
         $fullMessage = "Inertia SSR failed for component [{$component}]: {$message}";
 

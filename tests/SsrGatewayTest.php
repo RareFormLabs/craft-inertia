@@ -37,6 +37,17 @@ class SsrGatewayTest extends TestCase
         self::assertSame(2.0, $gateway->lastTimeout);
     }
 
+    public function testItAcceptsAnSsrUrlThatAlreadyIncludesTheRenderPath(): void
+    {
+        $gateway = new SsrGateway();
+
+        self::assertSame(
+            'http://127.0.0.1:13714/render',
+            $gateway->getRenderUrl($this->settings(['ssrUrl' => 'http://127.0.0.1:13714/render/'])),
+        );
+        self::assertNull($gateway->getRenderUrl($this->settings(['ssrUrl' => ' '])));
+    }
+
     public function testItGracefullyFallsBackWhenRenderingFails(): void
     {
         $gateway = new FakeSsrGateway();

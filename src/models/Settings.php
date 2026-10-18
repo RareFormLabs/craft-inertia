@@ -25,6 +25,14 @@ class Settings extends Model
     public array $assetsDirs = ['@webroot/assets'];
 
     /**
+     * Whether inertia_app() embeds the initial page object in a
+     * <script type="application/json"> element instead of a data-page attribute.
+     * Inertia v3 requires the script element; v2 only reads it when the client
+     * enables `future.useScriptElementForInitialPage`.
+     */
+    public bool $useScriptElementForInitialPage = false;
+
+    /**
      * Whether initial GET requests should be rendered by an Inertia SSR server.
      */
     public bool $ssrEnabled = false;
