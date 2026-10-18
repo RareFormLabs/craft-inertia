@@ -254,9 +254,8 @@ return [
     /**
      * The root template that will be rendered when first loading your Inertia app
      * (https://inertiajs.com/the-protocol#html-responses).
-     * Includes the div the inertia app will be rendered to:
-     * `<div id="app" data-page="{{ page|json_encode }}"></div>`
-     * and calls the Inertia app `<script src="<path_to_app>/app.js"></script>`
+     * Includes the inertia_head() and inertia_app() Twig helpers,
+     * plus your application's client-side assets.
      */
     'view' => 'base.twig',
 
@@ -287,8 +286,77 @@ return [
      */
     'takeoverRouting' => null,
 
+    /**
+     * Embed the initial page object in a `<script type="application/json">`
+     * element (instead of a `data-page` attribute) when `inertia_app()`
+     * renders on the client. Required for Inertia v3.
+     */
+    'useScriptElementForInitialPage' => false,
+
+    /**
+     * Enable server-side rendering for initial GET requests.
+     */
+    'ssrEnabled' => false,
+
+    /**
+     * Base URL of a trusted Inertia SSR server. The adapter posts page
+     * objects to its `/render` endpoint. Supports environment variables.
+     */
+    'ssrUrl' => 'http://127.0.0.1:13714',
+
+    /**
+     * Request timeout, in seconds, before falling back to client rendering.
+     */
+    'ssrTimeout' => 2.0,
+
+    /**
+     * Throw SSR errors instead of falling back. This is useful in automated
+     * tests, but is not recommended in production.
+     */
+    'ssrThrowOnError' => false,
+
 ];
 ```
+
+## Server-Side Rendering
+
+SSR is opt-in and follows Inertia's HTTP SSR protocol. On a full page load, the adapter sends the page object to a separately running Inertia SSR server and places the returned head and body markup into your root Twig template. Inertia visits (`X-Inertia` requests) still return JSON, and non-GET requests are never sent to the SSR server.
+
+First, render the app element with the Twig helpers in your root template instead of writing it by hand:
+
+```twig
+<!doctype html>
+<html>
+  <head>
+    {# Your normal head markup and client assets #}
+    {{ inertia_head() }}
+  </head>
+  <body>
+    {{ inertia_app() }}
+  </body>
+</html>
+```
+
+When SSR is disabled or unavailable, `inertia_app()` renders the client-side mount element with the page object instead, so the same template works with or without SSR. Pass an ID if your app mounts somewhere other than `#app`: `{{ inertia_app('root') }}`. The SSR server is only called when the template uses these helpers.
+
+How the page object is embedded depends on your Inertia version:
+
+- **Inertia v3** reads it from a `<script type="application/json">` element. Set `useScriptElementForInitialPage` to `true`.
+- **Inertia v2** reads a `data-page` attribute by default (the adapter's default). If you've enabled `future.useScriptElementForInitialPage` in `createInertiaApp`, set `useScriptElementForInitialPage` to `true` too.
+
+Then:
+
+1. Configure your client entry point to hydrate server-rendered markup.
+2. Create and build an SSR entry point using the server package for your client framework.
+3. Run the built SSR server as a supervised background process.
+4. Set `ssrEnabled` to `true` and point `ssrUrl` at that server.
+
+See Inertia's server-side rendering guide ([v3](https://inertiajs.com/docs/v3/advanced/server-side-rendering), [v2](https://inertiajs.com/docs/v2/advanced/server-side-rendering)) for Vue, React, and Svelte entry-point and hydration examples. The SSR server listens on port 13714 by default.
+
+If the SSR server cannot be reached, returns an error, or returns an invalid response, the adapter logs a warning and falls back to client rendering. Set `ssrThrowOnError` to `true` in automated tests if an SSR failure should fail the request instead.
+
+> [!IMPORTANT]
+> The SSR server receives the complete Inertia page object, including any authenticated-user or otherwise sensitive props. Keep the endpoint on loopback or a trusted private network; do not expose it publicly.
 
 ## Troubleshooting
 
