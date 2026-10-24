@@ -361,7 +361,7 @@ const updateCsrfFromResponse = (response: HttpResponse | undefined): void => {
  * Call it once from your app's entry point:
  *
  *   import { http } from "@inertiajs/vue3";
- *   import { configureCraftHttp } from "@rareform/craft-inertia";
+ *   import { configureCraftHttp } from "@rareformlabs/craft-inertia";
  *   configureCraftHttp(http);
  *
  * Calling it again with the same client does nothing, so it's safe alongside
