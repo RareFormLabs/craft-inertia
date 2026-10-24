@@ -69,3 +69,31 @@ jobs:
 
       - name: check committed build is up to date
         run: git diff --exit-code -- dist dist-dev || (echo "::error::Built assets are out of date. Run 'bun run build' in src/web/assets/axioshook and commit the result." && exit 1)
+
+  client:
+    name: "client package"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/client
+
+    steps:
+      - name: check out repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: run type checks
+        run: bun run typecheck
+
+      - name: run tests
+        run: bun test
+
+      - name: build
+        run: bun run build
