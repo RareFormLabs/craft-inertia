@@ -7,8 +7,6 @@ export type ActionResult<T extends object = object> =
 export type PostActionOptions = {
   /** Shown when a failure has no `message` of its own */
   fallbackMessage?: string;
-  /** The client to send it with, if not the one `configureCraftHttp()` set up */
-  http?: InertiaHttp;
 };
 
 const FALLBACK_MESSAGE = "Something went wrong. Please try again.";
@@ -21,16 +19,17 @@ const FALLBACK_MESSAGE = "Something went wrong. Please try again.";
  *   if (!result.ok) showErrors(result.errors);
  *
  * It goes through Inertia's HTTP client, so the CSRF token is added the same
- * way as for page visits. Failures (Craft's `asFailure()`, a 400 with a
- * `message` and maybe `errors`) come back as `ok: false` rather than throwing,
- * as do network errors.
+ * way as for page visits, and the fresh token Craft sends back replaces it (an
+ * action like finishing a login changes the session). Failures (Craft's
+ * `asFailure()`, a 400 with a `message` and maybe `errors`) come back as
+ * `ok: false` rather than throwing, as do network errors.
  */
 export async function postAction<T extends object = object>(
   action: string,
   data: Record<string, unknown> = {},
   options: PostActionOptions = {},
 ): Promise<ActionResult<T>> {
-  const http = options.http ?? resolveHttp();
+  const http = resolveHttp();
 
   try {
     const response = await http.getClient().request({
@@ -38,9 +37,11 @@ export async function postAction<T extends object = object>(
       // With `action` in the body, Craft runs it whatever the URL
       url: window.location.pathname,
       data: { ...data, action },
-      headers: { Accept: "application/json" },
+      // X-Craft-Csrf-Sync asks the plugin to send the session's current token
+      headers: { Accept: "application/json", "X-Craft-Csrf-Sync": "1" },
     });
-    return { ok: true, ...(parse(response.data) as T & { message?: string }) };
+    // After the body, so an action's own `ok` key can't override it
+    return { ...(parse(response.data) as T & { message?: string }), ok: true };
   } catch (error) {
     const body = parse(
       (error as { response?: { data?: unknown } } | null)?.response?.data,

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import {
   createFakeHttp,
+  metaToken,
   resetCraftHttp,
   responseError,
   setMetaToken,
@@ -28,7 +29,10 @@ describe("postAction", () => {
 
     expect(result).toEqual({ ok: true, message: "Saved.", secret: "xyz" });
     expect(sent[0].url).toBe("/account/settings");
-    expect(sent[0].headers).toEqual({ Accept: "application/json" });
+    expect(sent[0].headers).toEqual({
+      Accept: "application/json",
+      "X-Craft-Csrf-Sync": "1",
+    });
     const form = sent[0].data as FormData;
     expect(form.get("action")).toBe("two-factor/start");
     expect(form.get("password")).toBe("hunter2");
@@ -88,16 +92,33 @@ describe("postAction", () => {
     expect((sent[0].data as FormData).get("CRAFT_CSRF_TOKEN")).toBe("abc");
   });
 
-  it("sends with the client it's given", async () => {
-    const given = createFakeHttp();
-    configureCraftHttp(given.http);
-    const configured = createFakeHttp();
-    configureCraftHttp(configured.http);
+  it("keeps the request's outcome when the action's JSON has its own ok key", async () => {
+    const { http } = createFakeHttp(() => ({
+      status: 200,
+      data: JSON.stringify({ ok: false, reason: "pending" }),
+    }));
+    configureCraftHttp(http);
 
-    await postAction("a", {}, { http: given.http });
+    expect(await postAction<{ reason: string }>("a")).toEqual({
+      ok: true,
+      reason: "pending",
+    });
+  });
 
-    expect(given.sent).toHaveLength(1);
-    expect(configured.sent).toHaveLength(0);
+  it("replaces the token with the one Craft sends back", async () => {
+    const { http } = createFakeHttp(() => ({
+      status: 200,
+      data: "{}",
+      headers: {
+        "x-craft-csrf-token-name": "CRAFT_CSRF_TOKEN",
+        "x-craft-csrf-token": "signed-in",
+      },
+    }));
+    configureCraftHttp(http);
+
+    await postAction("auth/verify-totp", { code: "123456" });
+
+    expect(metaToken()).toEqual(["CRAFT_CSRF_TOKEN", "signed-in"]);
   });
 
   it("asks for configureCraftHttp() when there's no client", async () => {

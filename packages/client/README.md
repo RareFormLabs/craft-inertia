@@ -35,9 +35,6 @@ if (result.ok) {
 }
 ```
 
-Failures and network errors come back as `{ ok: false, message, errors }` rather than throwing. Options:
-
-- `fallbackMessage`: the message when a failure has none of its own (default "Something went wrong. Please try again.").
-- `http`: the client to send it with, if not the one passed to `configureCraftHttp()`.
+Failures and network errors come back as `{ ok: false, message, errors }` rather than throwing. The CSRF token is replaced with the one Craft sends back, so an action that logs someone in or out leaves a valid token for the next request. Pass `{ fallbackMessage }` as the third argument to change the message used when a failure has none of its own (default "Something went wrong. Please try again.").
 
 See the [plugin's README](https://github.com/RareFormLabs/craft-inertia#saving-data) for more.
