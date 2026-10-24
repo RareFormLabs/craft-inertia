@@ -8,3 +8,4 @@
 /bootstrap.php
 /craft
 /.vscode
+/.phpunit.cache

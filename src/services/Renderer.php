@@ -10,13 +10,31 @@ use craft\web\Response;
 use craft\web\View;
 use rareform\inertia\helpers\InertiaHelper;
 use rareform\inertia\models\InertiaPage;
+use rareform\inertia\models\SsrResponse;
 use rareform\inertia\Plugin as Inertia;
 use rareform\inertia\web\assets\axioshook\AxiosHookAsset;
 use yii\helpers\FileHelper;
+use yii\helpers\Html;
+use yii\helpers\Json;
 
 class Renderer extends Component
 {
     private array $captureStack = [];
+
+    /**
+     * The page object of the root template currently being rendered.
+     */
+    private ?array $rootPagePayload = null;
+
+    /**
+     * Whether the root template currently being rendered may be server-side rendered.
+     */
+    private bool $ssrAllowed = false;
+
+    /**
+     * The SSR result for the current root template, or false until it has been requested.
+     */
+    private SsrResponse|false|null $ssrResponse = false;
 
     public function setPageComponent(string $component): void
     {
@@ -123,12 +141,81 @@ class Renderer extends Component
         $view = Craft::$app->getView();
         $view->registerAssetBundle(AxiosHookAsset::class, View::POS_END);
 
-        $response->format = Response::FORMAT_RAW;
-        $response->content = $view->renderPageTemplate($this->resolveRootView($page->rootView), [
-            "page" => $payload,
-        ]);
+        $this->rootPagePayload = $payload;
+        $this->ssrAllowed = $request->getMethod() === "GET";
+        $this->ssrResponse = false;
+
+        try {
+            $response->format = Response::FORMAT_RAW;
+            $response->content = $view->renderPageTemplate($this->resolveRootView($page->rootView), [
+                "page" => $payload,
+            ]);
+        } finally {
+            $this->rootPagePayload = null;
+            $this->ssrAllowed = false;
+            $this->ssrResponse = false;
+        }
 
         return $response;
+    }
+
+    /**
+     * Returns the SSR head markup for the root template, if the page was server-side rendered.
+     */
+    public function renderInertiaHead(): string
+    {
+        return $this->getSsrResponse()?->head ?? "";
+    }
+
+    /**
+     * Returns the SSR body markup for the root template, falling back to the
+     * client-side mount element and page object when SSR is unavailable.
+     */
+    public function renderInertiaApp(string $id = "app"): string
+    {
+        if ($this->rootPagePayload === null) {
+            return "";
+        }
+
+        $ssrResponse = $this->getSsrResponse();
+        if ($ssrResponse !== null) {
+            return $ssrResponse->body;
+        }
+
+        if (Inertia::getInstance()->settings->useScriptElementForInitialPage) {
+            $json = Json::encode(
+                $this->rootPagePayload,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG,
+            );
+
+            return Html::script($json, ["data-page" => $id, "type" => "application/json"]) .
+                Html::tag("div", "", ["id" => $id]);
+        }
+
+        return Html::tag("div", "", [
+            "id" => $id,
+            "data-page" => Json::encode(
+                $this->rootPagePayload,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            ),
+        ]);
+    }
+
+    /**
+     * Dispatches the root page to the SSR server at most once per render, and only
+     * when the root template actually asks for SSR output.
+     */
+    private function getSsrResponse(): ?SsrResponse
+    {
+        if ($this->rootPagePayload === null || !$this->ssrAllowed) {
+            return null;
+        }
+
+        if ($this->ssrResponse === false) {
+            $this->ssrResponse = Inertia::getInstance()->ssrGateway->dispatch($this->rootPagePayload);
+        }
+
+        return $this->ssrResponse;
     }
 
     public function getInertiaProps(string $component, array $params = []): array
