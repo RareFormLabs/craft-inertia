@@ -1,5 +1,5 @@
 {
-  "name": "@rareform/craft-inertia",
+  "name": "@rareformlabs/craft-inertia",
   "version": "0.1.0",
   "description": "Client helpers for the Craft CMS Inertia adapter: CSRF handling for Inertia's HTTP client and posting to Craft controller actions",
   "license": "MIT",

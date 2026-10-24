@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@rareform/craft-inertia",
+      "name": "@rareformlabs/craft-inertia",
       "devDependencies": {
         "@happy-dom/global-registrator": "^21.0.4",
         "@inertiajs/core": "^3.9.1",

@@ -191,7 +191,7 @@
 	* Call it once from your app's entry point:
 	*
 	*   import { http } from "@inertiajs/vue3";
-	*   import { configureCraftHttp } from "@rareform/craft-inertia";
+	*   import { configureCraftHttp } from "@rareformlabs/craft-inertia";
 	*   configureCraftHttp(http);
 	*
 	* Calling it again with the same client does nothing, so it's safe alongside
@@ -241,7 +241,7 @@
 	/**
 	* The script the plugin adds to every Inertia page. It configures the HTTP
 	* client the app exposes as `window.inertiaHttp`, for apps that don't import
-	* `@rareform/craft-inertia` and call `configureCraftHttp(http)` themselves.
+	* `@rareformlabs/craft-inertia` and call `configureCraftHttp(http)` themselves.
 	*/
 	var checkForHttpClient = () => {
 		const MAX_ATTEMPTS = 40;

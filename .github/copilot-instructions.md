@@ -6,7 +6,7 @@
 - **Architecture:**
   - **Twig templates** define Inertia page responses and shared data, using `{% page('Component') %}` and `{{ prop('key', value) }}` for explicit, cacheable props.
   - **PHP plugin code** (in `src/`) handles routing, protocol, and prop extraction. Prop extraction is DRY: see `extractInertiaPropsFromString()` in `BaseController.php`.
-  - **JavaScript/TypeScript** lives in `packages/client/`, the `@rareform/craft-inertia` npm package: `configureCraftHttp()` (CSRF and form handling on Inertia's `http` client) and `postAction()`. `src/web/assets/axioshook/` is the script the plugin adds to each page; it bundles `configureCraftHttp()` from the package for apps that only set `window.inertiaHttp`.
+  - **JavaScript/TypeScript** lives in `packages/client/`, the `@rareformlabs/craft-inertia` npm package: `configureCraftHttp()` (CSRF and form handling on Inertia's `http` client) and `postAction()`. `src/web/assets/axioshook/` is the script the plugin adds to each page; it bundles `configureCraftHttp()` from the package for apps that only set `window.inertiaHttp`.
 
 ## Key Patterns & Conventions
 
@@ -27,11 +27,11 @@
 
 - **Install:** `composer require rareform/craft-inertia` and `php craft plugin/install inertia`
 - **Config:** Place `inertia.php` in `/config` to customize routing, variable capture, etc.
-- **Frontend:** Follow Inertia.js client setup, then call `configureCraftHttp(http)` from `@rareform/craft-inertia`.
+- **Frontend:** Follow Inertia.js client setup, then call `configureCraftHttp(http)` from `@rareformlabs/craft-inertia`.
 - **Saving Data:** Use the adapter's JS helper to avoid manual CSRF/action handling. Example:
   ```js
   import { http } from "@inertiajs/vue3";
-  import { configureCraftHttp, postAction } from "@rareform/craft-inertia";
+  import { configureCraftHttp, postAction } from "@rareformlabs/craft-inertia";
   configureCraftHttp(http);
   // ...
   form.post("entries/save-entry");

@@ -216,12 +216,12 @@ The adapter will automatically attach the CSRF token and action param, and send 
 Install the client package and set it up in your app's entry point:
 
 ```sh
-npm install @rareform/craft-inertia
+npm install @rareformlabs/craft-inertia
 ```
 
 ```js
 import { http } from "@inertiajs/vue3"; // or @inertiajs/react, @inertiajs/svelte
-import { configureCraftHttp } from "@rareform/craft-inertia";
+import { configureCraftHttp } from "@rareformlabs/craft-inertia";
 
 configureCraftHttp(http);
 ```
@@ -263,7 +263,7 @@ Either way, the helper updates the token from the `X-Craft-Csrf-Token` header Cr
 Some requests don't load a page, such as checking a code or saving a setting from a modal. `postAction()` posts to a Craft controller action through the same client, so the CSRF token is handled for you, and returns the action's JSON (`asSuccess()` / `asJson()`):
 
 ```js
-import { postAction } from "@rareform/craft-inertia";
+import { postAction } from "@rareformlabs/craft-inertia";
 
 const result = await postAction("users/save-user", { firstName: "Ada" });
 

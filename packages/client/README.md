@@ -1,9 +1,9 @@
-# @rareform/craft-inertia
+# @rareformlabs/craft-inertia
 
 Client helpers for the [Inertia adapter for Craft CMS](https://github.com/RareFormLabs/craft-inertia). Requires Inertia 3 or later.
 
 ```sh
-npm install @rareform/craft-inertia
+npm install @rareformlabs/craft-inertia
 ```
 
 ## `configureCraftHttp(http)`
@@ -12,7 +12,7 @@ Sets up Inertia's HTTP client for Craft: POST and PUT requests are sent as form 
 
 ```js
 import { http } from "@inertiajs/vue3"; // or @inertiajs/react, @inertiajs/svelte
-import { configureCraftHttp } from "@rareform/craft-inertia";
+import { configureCraftHttp } from "@rareformlabs/craft-inertia";
 
 configureCraftHttp(http);
 ```
@@ -24,7 +24,7 @@ Then `form.post("entries/save-entry")` and `router.post(...)` reach Craft's cont
 Posts to a Craft controller action through the same client and returns its JSON, for requests that don't load a page:
 
 ```ts
-import { postAction } from "@rareform/craft-inertia";
+import { postAction } from "@rareformlabs/craft-inertia";
 
 const result = await postAction<{ secret: string }>("my-module/two-factor/start", { password });
 
