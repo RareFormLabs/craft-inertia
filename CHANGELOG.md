@@ -1,5 +1,17 @@
 # Release Notes for Inertia
 
+## [2.1.0](https://github.com/RareFormLabs/craft-inertia/compare/2.0.1...2.1.0) (2026-10-24)
+
+
+### Added
+
+* add @rareform/craft-inertia client package with postAction ([#26](https://github.com/RareFormLabs/craft-inertia/issues/26)) ([0ae62d3](https://github.com/RareFormLabs/craft-inertia/commit/0ae62d3d6b83c4a4a01b9b3e490dc26521b9269a))
+
+
+### Fixed
+
+* publish the client package as @rareformlabs/craft-inertia ([#28](https://github.com/RareFormLabs/craft-inertia/issues/28)) ([24a08b4](https://github.com/RareFormLabs/craft-inertia/commit/24a08b4e14a8f0ecf7362d490308f08bb8730fb7))
+
 ## [2.0.1](https://github.com/RareFormLabs/craft-inertia/compare/2.0.0...2.0.1) - 2026-10-09
 
 
