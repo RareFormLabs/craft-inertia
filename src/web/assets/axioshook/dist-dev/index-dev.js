@@ -1,8 +1,12 @@
 (function(factory) {
 	typeof define === "function" && define.amd ? define([], factory) : factory();
 })(function() {
-	//#region src/index.ts
-	var http = null;
+	//#region ../../../../packages/client/src/http.ts
+	var CONFIGURED_KEY = Symbol.for("rareform.craft-inertia.http");
+	/**
+	* The HTTP client `configureCraftHttp()` has set up, if any.
+	*/
+	var getConfiguredHttp = () => globalThis[CONFIGURED_KEY] ?? null;
 	var CSRF_ENDPOINT = "/actions/users/session-info";
 	var getSessionInfo = async function() {
 		return await fetch(CSRF_ENDPOINT, { headers: { Accept: "application/json" } }).then((response) => response.json());
@@ -179,8 +183,24 @@
 		}
 		setCsrfOnMeta(tokenName, tokenValue);
 	};
-	var configureHttpClient = async () => {
-		if (!http) return;
+	/**
+	* Sets up Inertia's HTTP client for Craft: POST and PUT requests are sent as
+	* form data with the CSRF token and an `action` param, and the token is kept in
+	* sync with the one Craft sends back.
+	*
+	* Call it once from your app's entry point:
+	*
+	*   import { http } from "@inertiajs/vue3";
+	*   import { configureCraftHttp } from "@rareform/craft-inertia";
+	*   configureCraftHttp(http);
+	*
+	* Calling it again with the same client does nothing, so it's safe alongside
+	* the script the plugin adds to the page.
+	*/
+	var configureCraftHttp = (http) => {
+		const global = globalThis;
+		if (global[CONFIGURED_KEY] === http) return;
+		global[CONFIGURED_KEY] = http;
 		http.onRequest(async (config) => {
 			if (config.method !== "post" && config.method !== "put") return config;
 			let csrfMeta = getTokenFromMeta();
@@ -208,9 +228,6 @@
 			config.data = formData;
 			return config;
 		});
-	};
-	var configureResponseHandlers = () => {
-		if (!http) return;
 		http.onResponse((response) => {
 			updateCsrfFromResponse(response);
 			return response;
@@ -219,16 +236,24 @@
 			updateCsrfFromResponse(error.response);
 		});
 	};
-	console.log("Inertia (Craft): Configuring HTTP Client...");
-	var checkForHttpClient = async () => {
+	//#endregion
+	//#region src/index.ts
+	/**
+	* The script the plugin adds to every Inertia page. It configures the HTTP
+	* client the app exposes as `window.inertiaHttp`, for apps that don't import
+	* `@rareform/craft-inertia` and call `configureCraftHttp(http)` themselves.
+	*/
+	var checkForHttpClient = () => {
 		const MAX_ATTEMPTS = 40;
 		let attempts = 0;
-		const intervalCheck = setInterval(async () => {
-			if (window.inertiaHttp) {
-				http = window.inertiaHttp;
+		const intervalCheck = setInterval(() => {
+			if (getConfiguredHttp()) {
 				clearInterval(intervalCheck);
-				await configureHttpClient();
-				configureResponseHandlers();
+				return;
+			}
+			if (window.inertiaHttp) {
+				clearInterval(intervalCheck);
+				configureCraftHttp(window.inertiaHttp);
 				console.log("Inertia (Craft): HTTP Client configured successfully.");
 				return;
 			}
