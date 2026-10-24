@@ -1,0 +1,34 @@
+{
+  "name": "@rareform/craft-inertia",
+  "version": "0.1.0",
+  "description": "Client helpers for the Craft CMS Inertia adapter: CSRF handling for Inertia's HTTP client and posting to Craft controller actions",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RareFormLabs/craft-inertia.git",
+    "directory": "packages/client"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^21.0.4",
+    "@inertiajs/core": "^3.9.1",
+    "@types/bun": "^1.4.4",
+    "typescript": "~6.0.3"
+  }
+}

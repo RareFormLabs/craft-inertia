@@ -211,14 +211,29 @@ Attaching the CSRF token, the action param, and the `forceFormData` option is re
 
 ### Using the Adapter's Helper
 
-The adapter will automatically attach the CSRF token, action param, and set the `forceFormData` option to `true` for you, but needs access to the same Axios instance used by Inertia's native library.
+The adapter will automatically attach the CSRF token and action param, and send the request as form data, by hooking into Inertia's HTTP client (`http`, Inertia 3+).
 
-For the majority of projects, all that's needed on your end is to attach Axios to the window object. The adapter will take care of the rest. (Having issues? Visit troubleshooting section below)
+Install the client package and set it up in your app's entry point:
+
+```sh
+npm install @rareform/craft-inertia
+```
 
 ```js
-import axios from "axios";
-window.axios = axios;
+import { http } from "@inertiajs/vue3"; // or @inertiajs/react, @inertiajs/svelte
+import { configureCraftHttp } from "@rareform/craft-inertia";
+
+configureCraftHttp(http);
 ```
+
+Without the package, you can instead expose the client on the window, and the script the plugin adds to each page will set it up:
+
+```js
+import { http } from "@inertiajs/vue3";
+window.inertiaHttp = http;
+```
+
+Then post to Craft actions as you would any Inertia endpoint:
 
 ```js
 const form = useForm({
@@ -242,6 +257,25 @@ This looks much better. You can optionally reduce one extra step the helper take
 This extra step reduces additional fetch requests to Craft's sessions endpoint to get the CSRF token manually for unauthenticated users.
 
 Either way, the helper updates the token from the `X-Craft-Csrf-Token` header Craft sends with every Inertia response, so it stays valid after logging in or out without a full page load.
+
+### Actions That Return JSON
+
+Some requests don't load a page, such as checking a code or saving a setting from a modal. `postAction()` posts to a Craft controller action through the same client, so the CSRF token is handled for you, and returns the action's JSON (`asSuccess()` / `asJson()`):
+
+```js
+import { postAction } from "@rareform/craft-inertia";
+
+const result = await postAction("users/save-user", { firstName: "Ada" });
+
+if (result.ok) {
+  console.log(result.message);
+} else {
+  // Craft's asFailure() / asModelFailure(): a message, and field errors when it has them
+  console.log(result.message, result.errors);
+}
+```
+
+Failures and network errors come back as `{ ok: false, message, errors }` rather than throwing. In TypeScript, pass the shape of the success response: `postAction<{ secret: string }>(...)`.
 
 ## Configuration
 
@@ -298,31 +332,4 @@ This error is usually caused by the CSRF token not being passed correctly with t
 
 If you manually stored the CSRF token in a meta tag in your base template, make sure you are using the correct name for the token. The default name is `CRAFT_CSRF_TOKEN`, but it can be changed in your Craft config.
 
-[If you attached Axios to the window object](#using-the-adapters-Helper), make sure you are using the same instance of Axios that Inertia is using. If you have multiple versions of Axios installed (independently or through other packages) and are using Vite, you can resolve this by adding an alias to your Vite config:
-
-```js
-import { defineConfig } from "vite";
-import path from "path";
-
-export default defineConfig({
-  // ...other config
-  resolve: {
-    alias: {
-      axios: path.resolve(
-        __dirname,
-        "node_modules/@inertiajs/core/node_modules/axios"
-      ),
-    },
-  },
-});
-```
-
-Another way to resolve this is to use the `resolutions` field in your `package.json` file to force all packages to use the same version of Axios.
-
-```json
-{
-  "resolutions": {
-    "axios": "^1.x.x" // Specify the exact version Inertia uses
-  }
-}
-```
+Make sure the client is set up: either call `configureCraftHttp(http)` in your entry point, or set `window.inertiaHttp = http` (the browser console warns after 10 seconds if the plugin's script never finds it). Pass the `http` exported by the same Inertia adapter your app uses, so there's only one copy of `@inertiajs/core` in your bundle.
