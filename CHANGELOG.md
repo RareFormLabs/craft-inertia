@@ -1,6 +1,6 @@
 # Release Notes for Inertia
 
-## [2.1.0](https://github.com/RareFormLabs/craft-inertia/compare/2.0.1...2.1.0) (2026-10-24)
+## [2.1.0](https://github.com/RareFormLabs/craft-inertia/compare/2.0.1...2.1.0) - 2026-10-24
 
 
 ### Added
