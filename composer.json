@@ -12,7 +12,7 @@
     "craftcms/ecs": "dev-main",
     "craftcms/generator": "^2.1",
     "craftcms/phpstan": "dev-main",
-    "phpstan/phpstan": "^1.12"
+    "phpstan/phpstan": "^2.0"
   },
   "autoload": {
     "psr-4": {
