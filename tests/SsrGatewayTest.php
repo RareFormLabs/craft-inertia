@@ -3,6 +3,7 @@
 namespace rareform\inertia\tests;
 
 use PHPUnit\Framework\TestCase;
+use yii\base\Model;
 use rareform\inertia\models\Settings;
 use rareform\inertia\services\SsrGateway;
 use RuntimeException;
@@ -35,6 +36,20 @@ class SsrGatewayTest extends TestCase
         self::assertSame('<div id="app">Rendered</div>', $response->body);
         self::assertSame('http://127.0.0.1:13714/render', $gateway->lastUrl);
         self::assertSame(2.0, $gateway->lastTimeout);
+    }
+
+    public function testItEncodesThePageLikeTheClientPayload(): void
+    {
+        $gateway = new FakeSsrGateway();
+        $page = $this->page();
+        $page['props']['entry'] = new SsrGatewayTestArrayable();
+
+        $gateway->dispatch($page, $this->settings());
+
+        self::assertSame(
+            '{"component":"Posts/Index","props":{"posts":[],"entry":{"heading":"Café/Menu"}},"url":"/posts","version":"test"}',
+            $gateway->lastBody,
+        );
     }
 
     public function testItAcceptsAnSsrUrlThatAlreadyIncludesTheRenderPath(): void
@@ -106,11 +121,13 @@ class FakeSsrGateway extends SsrGateway
     public ?Throwable $exception = null;
     public ?string $lastUrl = null;
     public ?float $lastTimeout = null;
+    public ?string $lastBody = null;
 
-    protected function sendRequest(string $url, array $page, float $timeout): array
+    protected function sendRequest(string $url, string $body, float $timeout): array
     {
         $this->requestCount++;
         $this->lastUrl = $url;
+        $this->lastBody = $body;
         $this->lastTimeout = $timeout;
 
         if ($this->exception !== null) {
@@ -118,5 +135,15 @@ class FakeSsrGateway extends SsrGateway
         }
 
         return $this->response;
+    }
+}
+
+class SsrGatewayTestArrayable extends Model
+{
+    public string $title = 'Café/Menu';
+
+    public function fields(): array
+    {
+        return ['heading' => 'title'];
     }
 }

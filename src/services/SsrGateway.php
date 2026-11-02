@@ -11,6 +11,7 @@ use rareform\inertia\models\SsrResponse;
 use rareform\inertia\Plugin as Inertia;
 use RuntimeException;
 use Throwable;
+use yii\helpers\Json;
 
 class SsrGateway extends Component
 {
@@ -33,7 +34,7 @@ class SsrGateway extends Component
         try {
             [$statusCode, $body] = $this->sendRequest(
                 $renderUrl,
-                $page,
+                $this->encodePage($page),
                 $settings->ssrTimeout,
             );
         } catch (Throwable $exception) {
@@ -81,9 +82,18 @@ class SsrGateway extends Component
     }
 
     /**
+     * Encodes the page object exactly as the client receives it, so SSR markup
+     * hydrates against the same props (e.g. Arrayable objects via toArray()).
+     */
+    public function encodePage(array $page): string
+    {
+        return Json::encode($page, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
      * @return array{0: int, 1: string}
      */
-    protected function sendRequest(string $url, array $page, float $timeout): array
+    protected function sendRequest(string $url, string $body, float $timeout): array
     {
         $client = Craft::createGuzzleClient([
             'connect_timeout' => $timeout,
@@ -92,8 +102,11 @@ class SsrGateway extends Component
         ]);
 
         $response = $client->post($url, [
-            'headers' => ['Accept' => 'application/json'],
-            'json' => $page,
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ],
+            'body' => $body,
         ]);
 
         return [$response->getStatusCode(), (string)$response->getBody()];
