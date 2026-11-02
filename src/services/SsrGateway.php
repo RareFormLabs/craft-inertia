@@ -37,6 +37,7 @@ class SsrGateway extends Component
                 $this->encodePage($page),
                 // Guzzle treats 0 as "no timeout", so never let config bypass the bounds.
                 min(max($settings->ssrTimeout, 0.1), 30.0),
+                $settings->ssrRequestOptions,
             );
         } catch (Throwable $exception) {
             return $this->fail($page, $exception->getMessage(), $settings, $exception);
@@ -54,6 +55,11 @@ class SsrGateway extends Component
             $data = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
             return $this->fail($page, 'The SSR server returned invalid JSON.', $settings, $exception);
+        }
+
+        // Vite's dev endpoint answers null while its module graph warms up.
+        if ($data === null) {
+            return null;
         }
 
         if (!is_array($data) || !array_key_exists('body', $data) || !is_string($data['body'])) {
@@ -84,7 +90,8 @@ class SsrGateway extends Component
         $baseUrl = rtrim($baseUrl, '/');
         $path = rtrim((string)parse_url($baseUrl, PHP_URL_PATH), '/');
 
-        if (!str_ends_with($path, '/render')) {
+        // Vite's dev endpoint (/__inertia_ssr) renders at its own path.
+        if (!str_ends_with($path, '/render') && !str_ends_with($path, '/__inertia_ssr')) {
             $baseUrl .= '/render';
         }
 
@@ -103,13 +110,13 @@ class SsrGateway extends Component
     /**
      * @return array{0: int, 1: string}
      */
-    protected function sendRequest(string $url, string $body, float $timeout): array
+    protected function sendRequest(string $url, string $body, float $timeout, array $options = []): array
     {
-        $client = Craft::createGuzzleClient([
+        $client = Craft::createGuzzleClient(array_merge($options, [
             'connect_timeout' => $timeout,
             'http_errors' => false,
             'timeout' => $timeout,
-        ]);
+        ]));
 
         $response = $client->post($url, [
             'headers' => [

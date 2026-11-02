@@ -315,6 +315,12 @@ return [
      */
     'ssrThrowOnError' => false,
 
+    /**
+     * Extra Guzzle request options for SSR requests, e.g. `['verify' => false]`
+     * for a local dev server with a self-signed certificate.
+     */
+    'ssrRequestOptions' => [],
+
 ];
 ```
 
@@ -339,6 +345,8 @@ First, render the app element with the Twig helpers in your root template instea
 
 When SSR is disabled or unavailable, `inertia_app()` renders the client-side mount element with the page object instead, so the same template works with or without SSR. Pass an ID if your app mounts somewhere other than `#app`: `{{ inertia_app('root') }}`. The SSR server is only called when the template uses these helpers.
 
+The mount element is a plain `<div>`, both from SSR and in the fallback, so it can't carry classes or other attributes. Style it from CSS with its ID (e.g. `#app { … }`) instead.
+
 How the page object is embedded depends on your Inertia version:
 
 - **Inertia v3** reads it from a `<script type="application/json">` element. Set `useScriptElementForInitialPage` to `true`.
@@ -353,10 +361,29 @@ Then:
 
 See Inertia's server-side rendering guide ([v3](https://inertiajs.com/docs/v3/advanced/server-side-rendering), [v2](https://inertiajs.com/docs/v2/advanced/server-side-rendering)) for Vue, React, and Svelte entry-point and hydration examples. The SSR server listens on port 13714 by default.
 
+### Development with Vite
+
+Inertia v3's Vite plugin (`@inertiajs/vite`) renders SSR from the dev server, so you don't need to build or run a separate SSR server while developing. Point `ssrUrl` at the dev server's `/__inertia_ssr` endpoint. The adapter posts to that path directly instead of adding `/render`:
+
+```php
+'ssrUrl' => App::env('INERTIA_SSR_URL') ?: 'http://127.0.0.1:13714',
+```
+
+```bash
+INERTIA_SSR_URL=http://localhost:5173/__inertia_ssr
+```
+
+If the dev server uses HTTPS with a self-signed or local CA certificate, PHP's TLS verification rejects it (cURL error 60) and the page falls back to client rendering. Point Guzzle at the CA with `'ssrRequestOptions' => ['verify' => '/path/to/rootCA.pem']`, or turn verification off for local development only with `'ssrRequestOptions' => ['verify' => false]`.
+
 If the SSR server cannot be reached, returns an error, or returns an invalid response, the adapter logs a warning and falls back to client rendering. Set `ssrThrowOnError` to `true` in automated tests if an SSR failure should fail the request instead.
 
 > [!IMPORTANT]
-> The SSR server receives the complete Inertia page object, including any authenticated-user or otherwise sensitive props. Keep the endpoint on loopback or a trusted private network; do not expose it publicly.
+> The SSR server receives the complete Inertia page object, including any authenticated-user or otherwise sensitive props. It is also unauthenticated and has a `/shutdown` route that stops it. Inertia's server binds to `0.0.0.0` (every interface) by default, so bind it to loopback:
+>
+> - **Inertia v3:** pass `host: '127.0.0.1'` to `createServer()`, or set `ssr: { host: '127.0.0.1' }` in the `@inertiajs/vite` plugin options.
+> - **Inertia v2:** the server has no host option, so block port 13714 from outside the machine with a firewall.
+>
+> Keep `ssrUrl` on loopback or a trusted private network; never expose the SSR server publicly.
 
 ## Troubleshooting
 

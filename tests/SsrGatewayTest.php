@@ -72,6 +72,10 @@ class SsrGatewayTest extends TestCase
             'https://ssr.example.test/render?token=abc',
             $gateway->getRenderUrl($this->settings(['ssrUrl' => 'https://ssr.example.test/render?token=abc'])),
         );
+        self::assertSame(
+            'https://localhost:5173/__inertia_ssr',
+            $gateway->getRenderUrl($this->settings(['ssrUrl' => 'https://localhost:5173/__inertia_ssr'])),
+        );
         self::assertNull($gateway->getRenderUrl($this->settings(['ssrUrl' => ' '])));
     }
 
@@ -84,6 +88,23 @@ class SsrGatewayTest extends TestCase
 
         $gateway->dispatch($this->page(), $this->settings(['ssrTimeout' => 600]));
         self::assertSame(30.0, $gateway->lastTimeout);
+    }
+
+    public function testItPassesExtraRequestOptions(): void
+    {
+        $gateway = new FakeSsrGateway();
+
+        $gateway->dispatch($this->page(), $this->settings(['ssrRequestOptions' => ['verify' => false]]));
+
+        self::assertSame(['verify' => false], $gateway->lastOptions);
+    }
+
+    public function testItQuietlySkipsANullResponse(): void
+    {
+        $gateway = new FakeSsrGateway();
+        $gateway->response = [200, 'null'];
+
+        self::assertNull($gateway->dispatch($this->page(), $this->settings(['ssrThrowOnError' => true])));
     }
 
     public function testItGracefullyFallsBackWhenRenderingFails(): void
@@ -145,9 +166,11 @@ class FakeSsrGateway extends SsrGateway
     public ?string $lastUrl = null;
     public ?float $lastTimeout = null;
     public ?string $lastBody = null;
+    public array $lastOptions = [];
 
-    protected function sendRequest(string $url, string $body, float $timeout): array
+    protected function sendRequest(string $url, string $body, float $timeout, array $options = []): array
     {
+        $this->lastOptions = $options;
         $this->requestCount++;
         $this->lastUrl = $url;
         $this->lastBody = $body;

@@ -54,6 +54,12 @@ class Settings extends Model
     public bool $ssrThrowOnError = false;
 
     /**
+     * Extra Guzzle request options for SSR requests, e.g. `['verify' => false]`
+     * for a dev server with a self-signed certificate. Timeouts come from ssrTimeout.
+     */
+    public array $ssrRequestOptions = [];
+
+    /**
      * Whether Inertia routing is opt-in or catchall.
      */
     public ?string $routingMode = null;
