@@ -345,7 +345,7 @@ First, render the app element with the Twig helpers in your root template instea
 
 When SSR is disabled or unavailable, `inertia_app()` renders the client-side mount element with the page object instead, so the same template works with or without SSR. Pass an ID if your app mounts somewhere other than `#app`: `{{ inertia_app('root') }}`. The SSR server is only called when the template uses these helpers.
 
-The mount element is a plain `<div>`, both from SSR and in the fallback, so it can't carry classes or other attributes. Style it from CSS with its ID (e.g. `#app { … }`) instead.
+The adapter can't add classes or other attributes to the mount element. With SSR, its markup comes from your SSR server's render output. The fallback renders only the `id`, plus `data-page` unless `useScriptElementForInitialPage` is on. Style it from CSS by its ID (e.g. `#app { … }`) instead.
 
 How the page object is embedded depends on your Inertia version:
 

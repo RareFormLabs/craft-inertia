@@ -5,6 +5,7 @@ namespace rareform\inertia\services;
 use Craft;
 use craft\base\Component;
 use craft\helpers\App;
+use GuzzleHttp\Client;
 use JsonException;
 use rareform\inertia\models\Settings;
 use rareform\inertia\models\SsrResponse;
@@ -31,6 +32,9 @@ class SsrGateway extends Component
             return $this->fail($page, 'The SSR URL is empty.', $settings);
         }
 
+        $queryPos = strpos($renderUrl, '?');
+        $query = $queryPos === false ? '' : substr($renderUrl, $queryPos + 1);
+
         try {
             [$statusCode, $body] = $this->sendRequest(
                 $renderUrl,
@@ -40,7 +44,13 @@ class SsrGateway extends Component
                 $settings->ssrRequestOptions,
             );
         } catch (Throwable $exception) {
-            return $this->fail($page, $exception->getMessage(), $settings, $exception);
+            if ($query === '') {
+                return $this->fail($page, $exception->getMessage(), $settings, $exception);
+            }
+
+            // Transport errors include the full URL, so keep query-string credentials
+            // out of the log and don't chain the original exception.
+            return $this->fail($page, str_replace($query, '[redacted]', $exception->getMessage()), $settings);
         }
 
         if ($statusCode < 200 || $statusCode >= 300) {
@@ -58,7 +68,7 @@ class SsrGateway extends Component
         }
 
         // Vite's dev endpoint answers null while its module graph warms up.
-        if ($data === null) {
+        if ($data === null && $this->isViteDevEndpoint($renderUrl)) {
             return null;
         }
 
@@ -90,12 +100,20 @@ class SsrGateway extends Component
         $baseUrl = rtrim($baseUrl, '/');
         $path = rtrim((string)parse_url($baseUrl, PHP_URL_PATH), '/');
 
-        // Vite's dev endpoint (/__inertia_ssr) renders at its own path.
-        if (!str_ends_with($path, '/render') && !str_ends_with($path, '/__inertia_ssr')) {
+        // Vite's dev endpoint renders at its own path.
+        if (!str_ends_with($path, '/render') && !$this->isViteDevEndpoint($baseUrl)) {
             $baseUrl .= '/render';
         }
 
         return $query === null ? $baseUrl : "$baseUrl?$query";
+    }
+
+    /**
+     * Whether the URL points at the @inertiajs/vite dev server's SSR endpoint.
+     */
+    private function isViteDevEndpoint(string $url): bool
+    {
+        return str_ends_with(rtrim((string)parse_url($url, PHP_URL_PATH), '/'), '/__inertia_ssr');
     }
 
     /**
@@ -112,7 +130,7 @@ class SsrGateway extends Component
      */
     protected function sendRequest(string $url, string $body, float $timeout, array $options = []): array
     {
-        $client = Craft::createGuzzleClient(array_merge($options, [
+        $client = $this->createClient(array_merge($options, [
             'connect_timeout' => $timeout,
             'http_errors' => false,
             'timeout' => $timeout,
@@ -127,6 +145,11 @@ class SsrGateway extends Component
         ]);
 
         return [$response->getStatusCode(), (string)$response->getBody()];
+    }
+
+    protected function createClient(array $config): Client
+    {
+        return Craft::createGuzzleClient($config);
     }
 
     private function normalizeHead(mixed $head): ?string

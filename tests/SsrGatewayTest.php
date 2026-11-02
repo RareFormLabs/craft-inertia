@@ -2,7 +2,12 @@
 
 namespace rareform\inertia\tests;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
 use yii\base\Model;
 use rareform\inertia\models\Settings;
 use rareform\inertia\services\SsrGateway;
@@ -90,21 +95,62 @@ class SsrGatewayTest extends TestCase
         self::assertSame(30.0, $gateway->lastTimeout);
     }
 
-    public function testItPassesExtraRequestOptions(): void
-    {
-        $gateway = new FakeSsrGateway();
-
-        $gateway->dispatch($this->page(), $this->settings(['ssrRequestOptions' => ['verify' => false]]));
-
-        self::assertSame(['verify' => false], $gateway->lastOptions);
-    }
-
-    public function testItQuietlySkipsANullResponse(): void
+    public function testItQuietlySkipsANullResponseFromTheViteDevEndpoint(): void
     {
         $gateway = new FakeSsrGateway();
         $gateway->response = [200, 'null'];
 
-        self::assertNull($gateway->dispatch($this->page(), $this->settings(['ssrThrowOnError' => true])));
+        self::assertNull($gateway->dispatch($this->page(), $this->settings([
+            'ssrUrl' => 'http://localhost:5173/__inertia_ssr',
+            'ssrThrowOnError' => true,
+        ])));
+    }
+
+    public function testItRejectsANullResponseFromAnSsrServer(): void
+    {
+        $gateway = new FakeSsrGateway();
+        $gateway->response = [200, 'null'];
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('did not include a valid body');
+
+        $gateway->dispatch($this->page(), $this->settings(['ssrThrowOnError' => true]));
+    }
+
+    public function testItRedactsTheQueryStringFromTransportErrors(): void
+    {
+        $gateway = new FakeSsrGateway();
+        $gateway->exception = new RuntimeException(
+            'cURL error 7: Failed to connect (see …) for http://127.0.0.1:13714/render?token=s3cret',
+        );
+
+        try {
+            $gateway->dispatch($this->page(), $this->settings([
+                'ssrUrl' => 'http://127.0.0.1:13714?token=s3cret',
+                'ssrThrowOnError' => true,
+            ]));
+            self::fail('Expected the SSR failure to throw.');
+        } catch (RuntimeException $exception) {
+            self::assertStringNotContainsString('s3cret', $exception->getMessage());
+            self::assertStringContainsString('/render?[redacted]', $exception->getMessage());
+            self::assertNull($exception->getPrevious());
+        }
+    }
+
+    public function testItSendsRequestOptionsToTheHttpClient(): void
+    {
+        $gateway = new HandlerSsrGateway();
+
+        $response = $gateway->dispatch($this->page(), $this->settings([
+            'ssrRequestOptions' => ['verify' => false],
+        ]));
+
+        self::assertSame('<div id="app">Rendered</div>', $response?->body);
+        self::assertFalse($gateway->options['verify']);
+        self::assertSame(2.0, $gateway->options['timeout']);
+        self::assertSame('POST', $gateway->request?->getMethod());
+        self::assertSame('http://127.0.0.1:13714/render', (string)$gateway->request?->getUri());
+        self::assertSame('application/json', $gateway->request?->getHeaderLine('Content-Type'));
     }
 
     public function testItGracefullyFallsBackWhenRenderingFails(): void
@@ -166,11 +212,9 @@ class FakeSsrGateway extends SsrGateway
     public ?string $lastUrl = null;
     public ?float $lastTimeout = null;
     public ?string $lastBody = null;
-    public array $lastOptions = [];
 
     protected function sendRequest(string $url, string $body, float $timeout, array $options = []): array
     {
-        $this->lastOptions = $options;
         $this->requestCount++;
         $this->lastUrl = $url;
         $this->lastBody = $body;
@@ -191,5 +235,26 @@ class SsrGatewayTestArrayable extends Model
     public function fields(): array
     {
         return ['heading' => 'title'];
+    }
+}
+
+/**
+ * Runs the real request path through a Guzzle handler that records what it receives.
+ */
+class HandlerSsrGateway extends SsrGateway
+{
+    public ?RequestInterface $request = null;
+    public array $options = [];
+
+    protected function createClient(array $config): Client
+    {
+        $handler = function(RequestInterface $request, array $options) {
+            $this->request = $request;
+            $this->options = $options;
+
+            return Create::promiseFor(new Response(200, [], '{"head":[],"body":"<div id=\\"app\\">Rendered</div>"}'));
+        };
+
+        return new Client(['handler' => HandlerStack::create($handler)] + $config);
     }
 }
