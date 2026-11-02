@@ -35,7 +35,8 @@ class SsrGateway extends Component
             [$statusCode, $body] = $this->sendRequest(
                 $renderUrl,
                 $this->encodePage($page),
-                $settings->ssrTimeout,
+                // Guzzle treats 0 as "no timeout", so never let config bypass the bounds.
+                min(max($settings->ssrTimeout, 0.1), 30.0),
             );
         } catch (Throwable $exception) {
             return $this->fail($page, $exception->getMessage(), $settings, $exception);
@@ -72,13 +73,22 @@ class SsrGateway extends Component
 
     public function getRenderUrl(Settings $settings): ?string
     {
-        $baseUrl = rtrim(trim((string)App::parseEnv($settings->ssrUrl)), '/');
+        $url = trim((string)App::parseEnv($settings->ssrUrl));
 
-        if ($baseUrl === '') {
+        if ($url === '') {
             return null;
         }
 
-        return str_ends_with($baseUrl, '/render') ? $baseUrl : $baseUrl . '/render';
+        // Keep any query string (e.g. an auth token) after the /render path.
+        [$baseUrl, $query] = array_pad(explode('?', explode('#', $url, 2)[0], 2), 2, null);
+        $baseUrl = rtrim($baseUrl, '/');
+        $path = rtrim((string)parse_url($baseUrl, PHP_URL_PATH), '/');
+
+        if (!str_ends_with($path, '/render')) {
+            $baseUrl .= '/render';
+        }
+
+        return $query === null ? $baseUrl : "$baseUrl?$query";
     }
 
     /**

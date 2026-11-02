@@ -60,7 +60,30 @@ class SsrGatewayTest extends TestCase
             'http://127.0.0.1:13714/render',
             $gateway->getRenderUrl($this->settings(['ssrUrl' => 'http://127.0.0.1:13714/render/'])),
         );
+        self::assertSame(
+            'http://render/render',
+            $gateway->getRenderUrl($this->settings(['ssrUrl' => 'http://render'])),
+        );
+        self::assertSame(
+            'https://ssr.example.test/render?token=abc',
+            $gateway->getRenderUrl($this->settings(['ssrUrl' => 'https://ssr.example.test/?token=abc'])),
+        );
+        self::assertSame(
+            'https://ssr.example.test/render?token=abc',
+            $gateway->getRenderUrl($this->settings(['ssrUrl' => 'https://ssr.example.test/render?token=abc'])),
+        );
         self::assertNull($gateway->getRenderUrl($this->settings(['ssrUrl' => ' '])));
+    }
+
+    public function testItBoundsTheTimeout(): void
+    {
+        $gateway = new FakeSsrGateway();
+
+        $gateway->dispatch($this->page(), $this->settings(['ssrTimeout' => 0]));
+        self::assertSame(0.1, $gateway->lastTimeout);
+
+        $gateway->dispatch($this->page(), $this->settings(['ssrTimeout' => 600]));
+        self::assertSame(30.0, $gateway->lastTimeout);
     }
 
     public function testItGracefullyFallsBackWhenRenderingFails(): void
