@@ -1,5 +1,12 @@
 # Release Notes for Inertia
 
+## [2.2.0](https://github.com/RareFormLabs/craft-inertia/compare/2.1.0...2.2.0) (2026-11-03)
+
+
+### Added
+
+* add server-side rendering support ([#17](https://github.com/RareFormLabs/craft-inertia/issues/17)) ([f16e90b](https://github.com/RareFormLabs/craft-inertia/commit/f16e90b9e23f09d5e646f9ed5ba865c1b83c735a))
+
 ## [2.1.0](https://github.com/RareFormLabs/craft-inertia/compare/2.0.1...2.1.0) - 2026-10-24
 
 
