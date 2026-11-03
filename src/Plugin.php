@@ -18,6 +18,13 @@ use rareform\inertia\web\twig\InertiaExtension;
 use yii\base\Event;
 use yii\web\Response;
 
+/**
+ * @property-read \rareform\inertia\services\Renderer $renderer
+ * @property-read \rareform\inertia\services\ErrorHandler $errorHandler
+ * @property-read \rareform\inertia\services\PageResolver $pageResolver
+ * @property-read \rareform\inertia\services\SsrGateway $ssrGateway
+ * @property-read Settings $settings
+ */
 class Plugin extends BasePlugin
 {
     public static function config(): array
@@ -27,6 +34,7 @@ class Plugin extends BasePlugin
                 "renderer" => \rareform\inertia\services\Renderer::class,
                 "errorHandler" => \rareform\inertia\services\ErrorHandler::class,
                 "pageResolver" => \rareform\inertia\services\PageResolver::class,
+                "ssrGateway" => \rareform\inertia\services\SsrGateway::class,
             ],
         ];
     }

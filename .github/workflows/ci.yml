@@ -42,6 +42,9 @@ jobs:
       - name: run static analysis
         run: composer phpstan
 
+      - name: run tests
+        run: composer test
+
   assets:
     name: "assets"
     runs-on: ubuntu-latest
