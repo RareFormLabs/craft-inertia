@@ -42,6 +42,7 @@ class CatchallUrlRulesTest extends TestCase
             'AI catalog' => ['.well-known/ai-catalog.json'],
             'OAuth protected resource' => ['.well-known/oauth-protected-resource/admin/mcp'],
             'OAuth authorization server' => ['.well-known/oauth-authorization-server'],
+            'any other well-known path' => ['.well-known/openid-configuration'],
         ];
     }
 
