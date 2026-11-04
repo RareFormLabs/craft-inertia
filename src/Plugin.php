@@ -27,6 +27,18 @@ use yii\web\Response;
  */
 class Plugin extends BasePlugin
 {
+    /**
+     * Site URL rules appended when catch-all routing is enabled.
+     *
+     * Paths under `.well-known/` are left to Craft, which handles them after
+     * URL rules (change-password, passkey endpoints, the AI catalog and
+     * OAuth discovery metadata).
+     */
+    public const CATCHALL_URL_RULES = [
+        "" => "inertia/base/index",
+        "<catchall:(?!\\.well-known/).+>" => "inertia/base/index",
+    ];
+
     public static function config(): array
     {
         return [
@@ -200,10 +212,7 @@ class Plugin extends BasePlugin
             }
 
             if ($this->isCatchallRoutingEnabled()) {
-                $event->rules = array_merge($event->rules, [
-                    "" => "inertia/base/index",
-                    "<catchall:.+>" => "inertia/base/index",
-                ]);
+                $event->rules = array_merge($event->rules, self::CATCHALL_URL_RULES);
             }
         });
 
