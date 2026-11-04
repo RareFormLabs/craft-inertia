@@ -1,5 +1,12 @@
 # Release Notes for Inertia
 
+## [2.2.1](https://github.com/RareFormLabs/craft-inertia/compare/2.2.0...2.2.1) (2026-11-04)
+
+
+### Fixed
+
+* leave .well-known paths to Craft under catch-all routing ([#31](https://github.com/RareFormLabs/craft-inertia/issues/31)) ([5af9cba](https://github.com/RareFormLabs/craft-inertia/commit/5af9cba16770b81735dd7d1f2caac71b989207d5))
+
 ## [2.2.0](https://github.com/RareFormLabs/craft-inertia/compare/2.1.0...2.2.0) - 2026-11-03
 
 
