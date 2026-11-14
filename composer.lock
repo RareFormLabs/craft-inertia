@@ -3925,16 +3925,16 @@
         },
         {
             "name": "rareform/craft-prune",
-            "version": "0.4.1",
+            "version": "0.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RareFormLabs/craft-prune.git",
-                "reference": "09285cda6d6b53e137d9175da79d093755c8dd65"
+                "reference": "133c9d65ea1354dd27850dba1e09de63b9d59759"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RareFormLabs/craft-prune/zipball/09285cda6d6b53e137d9175da79d093755c8dd65",
-                "reference": "09285cda6d6b53e137d9175da79d093755c8dd65",
+                "url": "https://api.github.com/repos/RareFormLabs/craft-prune/zipball/133c9d65ea1354dd27850dba1e09de63b9d59759",
+                "reference": "133c9d65ea1354dd27850dba1e09de63b9d59759",
                 "shasum": ""
             },
             "require": {
@@ -3954,9 +3954,10 @@
             "description": "A package for Craft CMS to prune objects",
             "support": {
                 "issues": "https://github.com/RareFormLabs/craft-prune/issues",
-                "source": "https://github.com/RareFormLabs/craft-prune/tree/0.4.1"
+                "source": "https://github.com/RareFormLabs/craft-prune/tree/0.4.2"
             },
-            "time": "2025-07-31T22:59:52+00:00"
+            "time": "2026-11-14T23:36:32+00:00",
+            "published-time": "2026-11-14T23:37:37+00:00"
         },
         {
             "name": "samdark/yii2-psr-log-target",
@@ -10074,5 +10075,5 @@
     "platform-overrides": {
         "php": "8.2"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }
