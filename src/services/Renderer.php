@@ -164,7 +164,7 @@ class Renderer extends Component
      */
     public function renderInertiaHead(): string
     {
-        return $this->getSsrResponse()?->head ?? "";
+        return $this->getSsrResponse()->head ?? "";
     }
 
     /**
@@ -311,7 +311,7 @@ class Renderer extends Component
             $processedContent = preg_replace_callback(
                 $pattern,
                 function($matches) use ($view) {
-                    $pullPath = isset($matches[1]) && $matches[1] !== "" ? trim($matches[1]) : trim($matches[2]);
+                    $pullPath = $matches[1] !== "" ? trim($matches[1]) : trim($matches[2]);
                     $directPath = trim($pullPath, "'\"");
                     $referencedPath = $view->resolveTemplate($directPath);
 
