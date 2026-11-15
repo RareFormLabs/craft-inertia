@@ -1,6 +1,6 @@
 # Inertia.js Craft CMS Adapter
 
-![image](https://github.com/user-attachments/assets/97f925a2-74c8-4cc6-ad47-c4cdaafe915d)
+![Inertia: Build frontend experiences with the backend you love](https://raw.githubusercontent.com/inertiajs/.github/master/banner.jpeg)
 
 This is a server-side adapter for [Inertia](https://inertiajs.com) built with Craft CMS workflow simplicity in mind.
 
