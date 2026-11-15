@@ -16,11 +16,6 @@ parameters:
 			path: src/helpers/InertiaHelper.php
 
 		-
-			message: "#^Offset 1 on array\\{string, '', non\\-empty\\-string\\}\\|array\\{string, non\\-empty\\-string\\} in isset\\(\\) always exists and is not nullable\\.$#"
-			count: 1
-			path: src/services/Renderer.php
-
-		-
 			message: "#^Access to an undefined property craft\\\\base\\\\PluginInterface\\:\\:\\$renderer\\.$#"
 			count: 5
 			path: src/web/twig/InertiaExtension.php
