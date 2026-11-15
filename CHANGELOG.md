@@ -1,5 +1,12 @@
 # Release Notes for Inertia
 
+## [2.2.2](https://github.com/RareFormLabs/craft-inertia/compare/2.2.1...2.2.2) (2026-11-15)
+
+
+### Fixed
+
+* update plugin icon and README banner to Inertia's new branding ([#36](https://github.com/RareFormLabs/craft-inertia/issues/36)) ([9bf54cf](https://github.com/RareFormLabs/craft-inertia/commit/9bf54cf1c3c6ad92c8617875a3b6392a8671a3e3))
+
 ## [2.2.1](https://github.com/RareFormLabs/craft-inertia/compare/2.2.0...2.2.1) - 2026-11-04
 
 
