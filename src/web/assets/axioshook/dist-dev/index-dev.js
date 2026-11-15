@@ -1,7 +1,7 @@
 (function(factory) {
 	typeof define === "function" && define.amd ? define([], factory) : factory();
 })(function() {
-	//#region ../../../../packages/client/src/http.ts
+	// ../../../../packages/client/src/http.ts
 	var CONFIGURED_KEY = Symbol.for("rareform.craft-inertia.http");
 	/**
 	* The HTTP client `configureCraftHttp()` has set up, if any.
@@ -236,8 +236,7 @@
 			updateCsrfFromResponse(error.response);
 		});
 	};
-	//#endregion
-	//#region src/index.ts
+	// src/index.ts
 	/**
 	* The script the plugin adds to every Inertia page. It configures the HTTP
 	* client the app exposes as `window.inertiaHttp`, for apps that don't import
@@ -265,5 +264,4 @@
 		}, 250);
 	};
 	checkForHttpClient();
-	//#endregion
 });
