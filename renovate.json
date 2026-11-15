@@ -21,6 +21,12 @@
       "matchManagers": ["composer"],
       "matchPackageNames": ["php", "craftcms/cms"],
       "enabled": false
+    },
+    {
+      "description": "PHPUnit 12+ requires PHP 8.3+, but the plugin supports PHP 8.2 (config.platform). Raise this cap when the PHP floor moves.",
+      "matchManagers": ["composer"],
+      "matchPackageNames": ["phpunit/phpunit"],
+      "allowedVersions": "<12"
     }
   ]
 }
